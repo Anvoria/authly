@@ -4,7 +4,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/Anvoria/authly/config"
+	"github.com/Anvoria/authly/internal/config"
 	"github.com/Anvoria/authly/internal/database"
 	"github.com/Anvoria/authly/internal/router"
 	"github.com/gofiber/fiber/v2"

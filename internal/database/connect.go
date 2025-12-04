@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/Anvoria/authly/config"
+	"github.com/Anvoria/authly/internal/config"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
