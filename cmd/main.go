@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/Anvoria/authly/config"
+	"github.com/Anvoria/authly/internal/database"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -22,6 +23,12 @@ func main() {
 	app := fiber.New()
 
 	setupRoutes(app)
+
+	if err := database.ConnectDB(cfg); err != nil {
+		slog.Error("Failed to connect to database", "error", err)
+		os.Exit(1)
+	}
+	slog.Info("Database connected successfully")
 
 	addr := cfg.Server.Address()
 	slog.Info("Server starting", "address", addr)
