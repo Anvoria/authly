@@ -10,3 +10,6 @@ database:
   dbname: "authly"
   sslmode: "disable"
 
+logging:
+  level: "info"
+

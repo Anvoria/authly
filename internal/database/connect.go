@@ -2,7 +2,7 @@ package database
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 
 	"github.com/Anvoria/authly/config"
 	"gorm.io/driver/postgres"
@@ -23,6 +23,6 @@ func ConnectDB(cfg *config.Config) error {
 		return fmt.Errorf("failed to connect database: %w", err)
 	}
 
-	log.Println("Connection opened to database")
+	slog.Info("Connection opened to database")
 	return nil
 }

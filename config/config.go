@@ -11,6 +11,7 @@ import (
 type Config struct {
 	Server   ServerConfig   `yaml:"server"`
 	Database DatabaseConfig `yaml:"database"`
+	Logging  LoggingConfig  `yaml:"logging"`
 }
 
 // ServerConfig holds server-specific configuration
@@ -27,6 +28,11 @@ type DatabaseConfig struct {
 	Password string `yaml:"password"`
 	DBName   string `yaml:"dbname"`
 	SSLMode  string `yaml:"sslmode"`
+}
+
+// LoggingConfig holds logging-specific configuration
+type LoggingConfig struct {
+	Level string `yaml:"level"` // debug, info, warn, error
 }
 
 // Load reads configuration from a YAML file

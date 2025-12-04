@@ -5,6 +5,8 @@ go 1.25.4
 require (
 	github.com/goccy/go-yaml v1.19.0
 	github.com/gofiber/fiber/v2 v2.52.10
+	gorm.io/driver/postgres v1.6.0
+	gorm.io/gorm v1.31.1
 )
 
 require (
@@ -28,6 +30,4 @@ require (
 	golang.org/x/sync v0.18.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/text v0.31.0 // indirect
-	gorm.io/driver/postgres v1.6.0 // indirect
-	gorm.io/gorm v1.31.1 // indirect
 )
