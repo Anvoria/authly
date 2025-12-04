@@ -9,12 +9,9 @@ import (
 )
 
 func main() {
-	configPath := os.Getenv("CONFIG_PATH")
-	if configPath == "" {
-		configPath = "config.yaml"
-	}
+	envConfig := config.LoadEnv()
 
-	cfg, err := config.Load(configPath)
+	cfg, err := config.Load(envConfig.ConfigPath)
 	if err != nil {
 		slog.Error("Failed to load configuration", "error", err)
 		os.Exit(1)
