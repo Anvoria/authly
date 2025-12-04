@@ -2,3 +2,11 @@ server:
   host: "0.0.0.0"
   port: 8000
 
+database:
+  host: "localhost"
+  port: 5432
+  user: "postgres"
+  password: "postgres"
+  dbname: "authly"
+  sslmode: "disable"
+

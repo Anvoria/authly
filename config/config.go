@@ -9,13 +9,24 @@ import (
 
 // Config holds the application configuration
 type Config struct {
-	Server ServerConfig `yaml:"server"`
+	Server   ServerConfig   `yaml:"server"`
+	Database DatabaseConfig `yaml:"database"`
 }
 
 // ServerConfig holds server-specific configuration
 type ServerConfig struct {
 	Host string `yaml:"host"`
 	Port int    `yaml:"port"`
+}
+
+// DatabaseConfig holds database-specific configuration
+type DatabaseConfig struct {
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
+	DBName   string `yaml:"dbname"`
+	SSLMode  string `yaml:"sslmode"`
 }
 
 // Load reads configuration from a YAML file
@@ -36,4 +47,17 @@ func Load(path string) (*Config, error) {
 // Address returns the server address in the format "host:port"
 func (s *ServerConfig) Address() string {
 	return fmt.Sprintf("%s:%d", s.Host, s.Port)
+}
+
+// DSN returns the database connection string
+func (d *DatabaseConfig) DSN() string {
+	return fmt.Sprintf(
+		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
+		d.Host,
+		d.Port,
+		d.User,
+		d.Password,
+		d.DBName,
+		d.SSLMode,
+	)
 }
