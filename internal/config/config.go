@@ -9,7 +9,7 @@ import (
 
 // Config holds the application configuration
 type Config struct {
-	App 	 AppConfig `yaml:"app"`
+	App      AppConfig      `yaml:"app"`
 	Server   ServerConfig   `yaml:"server"`
 	Database DatabaseConfig `yaml:"database"`
 	Logging  LoggingConfig  `yaml:"logging"`
