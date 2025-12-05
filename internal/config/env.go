@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/joho/godotenv"
 )
 
 // EnvironmentType represents the application environment
@@ -42,7 +44,10 @@ type Environment struct {
 }
 
 // LoadEnv loads the environment variables
+// It first tries to load from .env file, then falls back to system environment variables
 func LoadEnv() *Environment {
+	_ = godotenv.Load()
+
 	envStr := getEnv("ENVIRONMENT", string(EnvironmentDevelopment))
 	envStr = strings.TrimSpace(envStr)
 	envStr = strings.ToLower(envStr)
