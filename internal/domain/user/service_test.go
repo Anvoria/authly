@@ -86,7 +86,6 @@ func TestService_Register(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			db.Exec("DELETE FROM users")
 
-			// Create existing user for duplicate tests
 			if tt.wantErr != nil {
 				if errors.Is(tt.wantErr, ErrEmailExists) {
 					_, err := service.Register(RegisterRequest{
