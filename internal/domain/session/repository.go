@@ -61,5 +61,5 @@ func (r *repository) Revoke(id uuid.UUID) error {
 func (r *repository) UpdateLastUsed(id uuid.UUID, t time.Time) error {
 	return r.db.Model(&Session{}).
 		Where("id = ? AND revoked = false", id).
-		Update("last_used", t).Error
+		Update("last_used_at", t).Error
 }

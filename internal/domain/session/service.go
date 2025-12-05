@@ -2,6 +2,7 @@ package session
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"crypto/rand"
@@ -98,6 +99,10 @@ func (s *service) Validate(id uuid.UUID, secret string) (*Session, error) {
 
 	if hashSecret(secret) != sess.RefreshHash {
 		return nil, ErrInvalidSecret
+	}
+
+	if err := s.repo.UpdateLastUsed(id, time.Now().UTC()); err != nil {
+		return nil, fmt.Errorf("failed to update session usage: %w", err)
 	}
 
 	return sess, nil
