@@ -6,7 +6,6 @@ import (
 
 	"github.com/Anvoria/authly/internal/config"
 	"github.com/Anvoria/authly/internal/database"
-	"github.com/Anvoria/authly/internal/router"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -22,7 +21,7 @@ func Start(cfg *config.Config) error {
 	}
 	slog.Info("Database connected successfully")
 
-	router.SetupRoutes(app)
+	SetupRoutes(app)
 
 	addr := cfg.Server.Address()
 	slog.Info("Server starting", "address", addr)

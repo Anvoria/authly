@@ -1,4 +1,4 @@
-package router
+package server
 
 import "github.com/gofiber/fiber/v2"
 
