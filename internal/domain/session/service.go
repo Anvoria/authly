@@ -68,7 +68,7 @@ func (s *service) Create(userID uuid.UUID, userAgent, ip string, ttl time.Durati
 		RefreshHash: hashSecret(secret),
 		ExpiresAt:   time.Now().UTC().Add(ttl),
 		UserAgent:   userAgent,
-		IPAddress:   ip,
+		IPAddress:   ip, 
 		LastUsedAt:  time.Now().UTC(),
 	}
 
