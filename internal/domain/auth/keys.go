@@ -24,10 +24,10 @@ type KeyStore struct {
 func LoadKeys(path, activeKid string) (*KeyStore, error) {
 	info, err := os.Stat(path)
 	if err != nil {
-		return nil, fmt.Errorf("keys directory does not exist or is not accessible: %w", err)
+		return nil, &ErrKeysDirectoryNotAccessible{Path: path, Err: err}
 	}
 	if !info.IsDir() {
-		return nil, fmt.Errorf("keys path is not a directory: %s", path)
+		return nil, &ErrKeysPathNotDirectory{Path: path}
 	}
 
 	ks := &KeyStore{
@@ -37,7 +37,7 @@ func LoadKeys(path, activeKid string) (*KeyStore, error) {
 
 	files, err := os.ReadDir(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read keys directory: %w", err)
+		return nil, &ErrFailedToReadKeysDirectory{Err: err}
 	}
 
 	for _, file := range files {
@@ -60,23 +60,23 @@ func LoadKeys(path, activeKid string) (*KeyStore, error) {
 		privPath := filepath.Join(path, fileName)
 		privData, err := os.ReadFile(privPath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read private key file %s: %w", fileName, err)
+			return nil, &ErrFailedToReadPrivateKeyFile{FileName: fileName, Err: err}
 		}
 
 		block, _ := pem.Decode(privData)
 		if block == nil {
-			return nil, fmt.Errorf("failed to decode PEM block from private key file: %s", fileName)
+			return nil, &ErrFailedToDecodePrivateKeyPEM{FileName: fileName}
 		}
 
 		priv, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 		if err != nil {
 			pkcs8Key, err2 := x509.ParsePKCS8PrivateKey(block.Bytes)
 			if err2 != nil {
-				return nil, fmt.Errorf("failed to parse private key from %s (tried PKCS1 and PKCS8): %w", fileName, err)
+				return nil, &ErrFailedToParsePrivateKey{FileName: fileName, Err: err}
 			}
 			rsaKey, ok := pkcs8Key.(*rsa.PrivateKey)
 			if !ok {
-				return nil, fmt.Errorf("private key in %s is not an RSA key", fileName)
+				return nil, &ErrPrivateKeyNotRSA{FileName: fileName}
 			}
 			priv = rsaKey
 		}
@@ -85,22 +85,22 @@ func LoadKeys(path, activeKid string) (*KeyStore, error) {
 		pubPath := filepath.Join(path, pubFileName)
 		pubData, err := os.ReadFile(pubPath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read public key file %s: %w", pubFileName, err)
+			return nil, &ErrFailedToReadPublicKeyFile{FileName: pubFileName, Err: err}
 		}
 
 		pubBlock, _ := pem.Decode(pubData)
 		if pubBlock == nil {
-			return nil, fmt.Errorf("failed to decode PEM block from public key file: %s", pubFileName)
+			return nil, &ErrFailedToDecodePublicKeyPEM{FileName: pubFileName}
 		}
 
 		pub, err := x509.ParsePKIXPublicKey(pubBlock.Bytes)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse public key from %s: %w", pubFileName, err)
+			return nil, &ErrFailedToParsePublicKey{FileName: pubFileName, Err: err}
 		}
 
 		rsaPub, ok := pub.(*rsa.PublicKey)
 		if !ok {
-			return nil, fmt.Errorf("public key in %s is not an RSA key", pubFileName)
+			return nil, &ErrPublicKeyNotRSA{FileName: pubFileName}
 		}
 
 		keyID := fmt.Sprintf("key-%s", kid)

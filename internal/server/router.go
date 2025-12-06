@@ -3,7 +3,6 @@ package server
 import (
 	"fmt"
 	"log/slog"
-	"time"
 
 	"github.com/Anvoria/authly/internal/config"
 	"github.com/Anvoria/authly/internal/database"
@@ -35,10 +34,9 @@ func SetupRoutes(app *fiber.App, envConfig *config.Environment, cfg *config.Conf
 	}
 
 	slog.Info("Active key loaded", "key", cfg.Auth.ActiveKID)
-	tokenGenerator := auth.NewTokenGenerator(activeKey.PrivateKey, cfg.App.Name, 15*time.Minute)
 
 	// Initialize auth service
-	authService := auth.NewService(userRepo, sessionService, tokenGenerator)
+	authService := auth.NewService(userRepo, sessionService, keyStore, cfg.App.Name)
 	authHandler := auth.NewHandler(authService)
 
 	// Setup auth routes

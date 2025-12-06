@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -14,11 +15,11 @@ type LoginRequest struct {
 }
 
 type Handler struct {
-	Service *Service
+	authService *Service
 }
 
 func NewHandler(s *Service) *Handler {
-	return &Handler{Service: s}
+	return &Handler{authService: s}
 }
 
 func (h *Handler) Login(c *fiber.Ctx) error {
@@ -27,19 +28,29 @@ func (h *Handler) Login(c *fiber.Ctx) error {
 		return utils.ErrorResponse(c, "invalid_body", fiber.StatusBadRequest)
 	}
 
-	res, err := h.Service.Login(req.Email, req.Password, c.Get("User-Agent"), c.IP(), 24*time.Hour)
+	res, err := h.authService.Login(
+		req.Email,
+		req.Password,
+		c.Get("User-Agent"),
+		c.IP(),
+	)
+
 	if err != nil {
 		return utils.ErrorResponse(c, err.Error(), fiber.StatusUnauthorized)
 	}
 
 	c.Cookie(&fiber.Cookie{
 		Name:     "refresh_token",
-		Value:    res.RefreshToken,
+		Value:    fmt.Sprintf("%s:%s", res.RefreshSID, res.RefreshToken),
 		HTTPOnly: true,
 		Secure:   true,
 		Path:     "/",
 		SameSite: "None",
+		Expires:  time.Now().Add(30 * 24 * time.Hour),
 	})
 
-	return utils.SuccessResponse(c, res, "Login successful")
+	return utils.SuccessResponse(c, fiber.Map{
+		"access_token": res.AccessToken,
+		"user":         res.User,
+	}, "Login successful")
 }
