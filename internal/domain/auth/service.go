@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"log/slog"
 	"time"
 
 	"github.com/Anvoria/authly/internal/domain/permission"
@@ -184,10 +185,7 @@ func (s *Service) Register(req user.RegisterRequest) (*user.UserResponse, error)
 // This is a stub implementation - in production, this should check Redis/cache
 // for revoked tokens (e.g., by jti claim or user:last_logout_at)
 func (s *Service) IsTokenRevoked(claims *AccessTokenClaims) (bool, error) {
-	// TODO: Implement Redis-based revocation check
-	// For now, return false (not revoked)
-	// In production, check:
-	// 1. Redis key: "token:revoked:{jti}" or "user:logout:{userID}"
-	// 2. Compare token issued_at with user's last_logout_at
+	// TODO: Implement Redis-based revocation check https://github.com/Anvoria/authly/issues/9
+	slog.Warn("IsTokenRevoked is not implemented")
 	return false, nil
 }
