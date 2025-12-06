@@ -18,6 +18,8 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: authly_test
+        ports:
+          - 5432:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -26,7 +28,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Cache Go modules and build cache
         uses: actions/cache@v4
@@ -39,7 +41,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: '1.25.4'
           cache-dependency-path: go.sum
@@ -62,7 +64,7 @@ jobs:
             active_kid: "main"
           
           database:
-            host: postgres
+            host: localhost
             port: 5432
             user: "postgres"
             password: "postgres"
@@ -76,19 +78,29 @@ jobs:
       - name: Create keys directory
         run: mkdir -p keys
 
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Wait for PostgreSQL
+        run: |
+          until pg_isready -h localhost -p 5432 -U postgres; do
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+          echo "PostgreSQL is ready!"
+
       - name: Run go vet
         run: go vet ./...
 
       - name: Run tests
         env:
           TEST_CONFIG_PATH: config.ci.yaml
-        run: go test -v -race -coverprofile=coverage.out ./...
+        run: go test -v -race -coverprofile=coverage.txt ./...
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
-          file: ./coverage.out
-          fail_ci_if_error: false
+            token: ${{ secrets.CODECOV_TOKEN }}
 
   build:
     name: Build
@@ -110,7 +122,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: '1.25.4'
           cache-dependency-path: go.sum
