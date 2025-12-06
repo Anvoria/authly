@@ -87,3 +87,35 @@ func (s *Service) Login(username, password, userAgent, ip string) (*LoginRespons
 		User:         u.ToResponse(),
 	}, nil
 }
+
+func (s *Service) Register(req user.RegisterRequest) (*user.UserResponse, error) {
+	if req.Email != "" {
+		if _, err := s.Users.FindByEmail(req.Email); err == nil {
+			return nil, user.ErrEmailExists
+		}
+	}
+
+	if _, err := s.Users.FindByUsername(req.Username); err == nil {
+		return nil, user.ErrUsernameExists
+	}
+
+	hashedPassword, err := user.HashPassword(req.Password)
+	if err != nil {
+		return nil, err
+	}
+
+	newUser := &user.User{
+		Username:  req.Username,
+		FirstName: req.FirstName,
+		LastName:  req.LastName,
+		Email:     req.Email,
+		Password:  hashedPassword,
+		IsActive:  true,
+	}
+
+	if err := s.Users.Create(newUser); err != nil {
+		return nil, err
+	}
+
+	return newUser.ToResponse(), nil
+}

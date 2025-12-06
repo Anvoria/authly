@@ -37,8 +37,11 @@ func (s *service) Register(req RegisterRequest) (*User, error) {
 		return nil, ErrUsernameRequired
 	}
 
-	if _, err := s.repo.FindByEmail(req.Email); err == nil {
-		return nil, ErrEmailExists
+	// Only check email uniqueness if email is provided (not empty)
+	if req.Email != "" {
+		if _, err := s.repo.FindByEmail(req.Email); err == nil {
+			return nil, ErrEmailExists
+		}
 	}
 
 	if _, err := s.repo.FindByUsername(req.Username); err == nil {

@@ -50,3 +50,19 @@ func (h *Handler) Login(c *fiber.Ctx) error {
 		"user":         res.User,
 	}, "Login successful")
 }
+
+func (h *Handler) Register(c *fiber.Ctx) error {
+	var req user.RegisterRequest
+	if err := c.BodyParser(&req); err != nil {
+		return utils.ErrorResponse(c, "invalid_body", fiber.StatusBadRequest)
+	}
+
+	res, err := h.authService.Register(req)
+	if err != nil {
+		return utils.ErrorResponse(c, err.Error(), fiber.StatusInternalServerError)
+	}
+
+	return utils.SuccessResponse(c, fiber.Map{
+		"user": res,
+	}, "User registered successfully")
+}
