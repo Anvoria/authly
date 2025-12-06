@@ -100,6 +100,10 @@ func (s *service) Validate(id uuid.UUID, secret string) (*Session, error) {
 		return nil, ErrInvalidSecret
 	}
 
+	if err := s.repo.UpdateLastUsed(id, time.Now().UTC()); err != nil {
+		return nil, err
+	}
+
 	return sess, nil
 }
 
