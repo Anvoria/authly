@@ -41,8 +41,10 @@ func SetupRoutes(app *fiber.App, envConfig *config.Environment, cfg *config.Conf
 	authHandler := auth.NewHandler(authService)
 
 	// Setup auth routes
-	auth := api.Group("/auth")
-	auth.Post("/login", authHandler.Login)
+	authGroup := api.Group("/auth")
+	authGroup.Post("/login", authHandler.Login)
+
+	app.Get("/.well-known/jwks.json", auth.JWKSHandler(keyStore))
 
 	return nil
 }
