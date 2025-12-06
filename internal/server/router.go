@@ -2,7 +2,7 @@ package server
 
 import (
 	"fmt"
-	"time"
+	"log/slog"
 
 	"github.com/Anvoria/authly/internal/config"
 	"github.com/Anvoria/authly/internal/database"
@@ -13,7 +13,7 @@ import (
 )
 
 // SetupRoutes sets up the routes for the application
-func SetupRoutes(app *fiber.App, envConfig *config.Environment) error {
+func SetupRoutes(app *fiber.App, envConfig *config.Environment, cfg *config.Config) error {
 	api := app.Group("/v1")
 
 	// Initialize repositories
@@ -23,21 +23,28 @@ func SetupRoutes(app *fiber.App, envConfig *config.Environment) error {
 	// Initialize services
 	sessionService := session.NewService(sessionRepo)
 
-	// Load RSA private key from environment
-	privateKey, err := config.LoadRSAPrivateKey(envConfig.PrivateKey, envConfig.Environment)
+	keyStore, err := auth.LoadKeys(cfg.Auth.KeysPath, cfg.Auth.ActiveKID)
 	if err != nil {
-		return fmt.Errorf("failed to load RSA private key: %w", err)
+		return fmt.Errorf("failed to load keys: %w", err)
 	}
 
-	tokenGenerator := auth.NewTokenGenerator(privateKey, "authly", 15*time.Minute)
+	activeKey, err := keyStore.GetActiveKey()
+	if err != nil {
+		return fmt.Errorf("active key with KID %s not found in key store: %w", cfg.Auth.ActiveKID, err)
+	}
+
+	keyID, _ := activeKey.KeyID()
+	slog.Info("Active key loaded", "key", cfg.Auth.ActiveKID, "key_id", keyID)
 
 	// Initialize auth service
-	authService := auth.NewService(userRepo, sessionService, tokenGenerator)
+	authService := auth.NewService(userRepo, sessionService, keyStore, cfg.App.Name)
 	authHandler := auth.NewHandler(authService)
 
 	// Setup auth routes
-	auth := api.Group("/auth")
-	auth.Post("/login", authHandler.Login)
+	authGroup := api.Group("/auth")
+	authGroup.Post("/login", authHandler.Login)
+
+	app.Get("/.well-known/jwks.json", auth.JWKSHandler(keyStore))
 
 	return nil
 }

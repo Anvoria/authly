@@ -5,6 +5,10 @@ server:
   host: "0.0.0.0"
   port: 8000
 
+auth:
+  keys_path: "keys"
+  active_kid: "main"
+
 database:
   host: "localhost"
   port: 5433

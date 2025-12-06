@@ -1,69 +1,89 @@
 package auth
 
 import (
-	"errors"
 	"time"
 
 	"github.com/Anvoria/authly/internal/domain/session"
 	"github.com/Anvoria/authly/internal/domain/user"
-	"github.com/google/uuid"
-)
-
-var (
-	// ErrInvalidCredentials is returned when email or password is incorrect
-	ErrInvalidCredentials = errors.New("invalid credentials")
+	"github.com/lestrrat-go/jwx/v3/jwt"
 )
 
 // LoginResponse represents the response from a successful login
 type LoginResponse struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
+	AccessToken  string             `json:"access_token"`
+	RefreshToken string             `json:"refresh_token"`
+	RefreshSID   string             `json:"refresh_sid"`
+	User         *user.UserResponse `json:"user"`
 }
 
 // Service handles authentication operations
 type Service struct {
 	Users    user.Repository
 	Sessions session.Service
-	Tokens   *TokenGenerator
+	KeyStore *KeyStore
+	issuer   string
 }
 
 // NewService creates a new auth service
-func NewService(users user.Repository, sessions session.Service, tokens *TokenGenerator) *Service {
+func NewService(users user.Repository, sessions session.Service, keyStore *KeyStore, issuer string) *Service {
 	return &Service{
 		Users:    users,
 		Sessions: sessions,
-		Tokens:   tokens,
+		KeyStore: keyStore,
+		issuer:   issuer,
 	}
 }
 
-// Login authenticates a user and creates a session
-func (s *Service) Login(email, password, userAgent, ip string, ttl time.Duration) (*LoginResponse, error) {
-	u, err := s.Users.GetByEmail(email)
+func (s *Service) GenerateAccessToken(sub, sid string, aud []string) (string, error) {
+	now := time.Now()
+	exp := now.Add(15 * time.Minute)
+
+	// Build token
+	token, err := jwt.NewBuilder().
+		Subject(sub).
+		Audience(aud).
+		Issuer(s.issuer).
+		IssuedAt(now).
+		Expiration(exp).
+		Claim("sid", sid).
+		Build()
+	if err != nil {
+		return "", err
+	}
+
+	claims := &AccessTokenClaims{
+		Sid:   sid,
+		Token: token,
+	}
+
+	return s.KeyStore.Sign(claims)
+}
+
+func (s *Service) Login(username, password, userAgent, ip string) (*LoginResponse, error) {
+	u, err := s.Users.GetByUsername(username)
 	if err != nil {
 		return nil, ErrInvalidCredentials
 	}
 
-	if !s.Users.VerifyPassword(u, password) {
+	if !user.VerifyPassword(password, u.Password) {
 		return nil, ErrInvalidCredentials
 	}
 
-	userID, err := uuid.Parse(u.ID.String())
+	// TODO: Scopes
+
+	sid, secret, err := s.Sessions.Create(u.ID, userAgent, ip, 24*time.Hour)
 	if err != nil {
 		return nil, err
 	}
 
-	sessionID, secret, err := s.Sessions.Create(userID, userAgent, ip, ttl)
+	access, err := s.GenerateAccessToken(u.ID.String(), sid.String(), []string{"api"})
 	if err != nil {
 		return nil, err
 	}
-
-	access, err := s.Tokens.GenerateAccessToken(u.ID.String(), sessionID.String())
-	if err != nil {
-		return nil, err
-	}
-
 	return &LoginResponse{
 		AccessToken:  access,
-		RefreshToken: sessionID.String() + ":" + secret,
+		RefreshToken: secret,
+		RefreshSID:   sid.String(),
+		User:         u.ToResponse(),
 	}, nil
 }
