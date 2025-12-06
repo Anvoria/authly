@@ -43,7 +43,6 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/segmentio/asm v1.2.1 // indirect
-	github.com/stretchr/objx v0.5.3 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.68.0 // indirect
 	github.com/valyala/fastjson v1.6.4 // indirect

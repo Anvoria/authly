@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 var (
@@ -28,6 +29,7 @@ type Service interface {
 	Validate(sessionID uuid.UUID, secret string) (*Session, error)
 	Rotate(sessionID uuid.UUID, oldSecret string, ttl time.Duration) (newSecret string, err error)
 	Revoke(sessionID uuid.UUID) error
+	Exists(sessionID uuid.UUID) (bool, error)
 }
 
 // service struct for session operations
@@ -85,7 +87,10 @@ func (s *service) Create(userID uuid.UUID, userAgent, ip string, ttl time.Durati
 func (s *service) Validate(id uuid.UUID, secret string) (*Session, error) {
 	sess, err := s.repo.FindByID(id)
 	if err != nil {
-		return nil, ErrInvalidSession
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrInvalidSession
+		}
+		return nil, err
 	}
 
 	if sess.Revoked {
@@ -134,4 +139,25 @@ func (s *service) Rotate(id uuid.UUID, oldSecret string, ttl time.Duration) (str
 // Revoke revokes a session
 func (s *service) Revoke(id uuid.UUID) error {
 	return s.repo.Revoke(id)
+}
+
+// Exists checks if a session exists and is valid (not revoked, not expired)
+func (s *service) Exists(id uuid.UUID) (bool, error) {
+	sess, err := s.repo.FindByID(id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	if sess.Revoked {
+		return false, nil
+	}
+
+	if time.Now().UTC().After(sess.ExpiresAt) {
+		return false, nil
+	}
+
+	return true, nil
 }
