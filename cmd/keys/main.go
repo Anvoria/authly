@@ -255,6 +255,6 @@ func setActiveKey(cfg *config.Config, kid string) {
 	fmt.Printf("To set active key, update %s:\n\n", configPath)
 	fmt.Printf("  auth:\n")
 	fmt.Printf("    keys_path: %s\n", cfg.Auth.KeysPath)
-	fmt.Printf("    active_kid: %s\n", keyID)
+	fmt.Printf("    active_kid: %s\n", kid)
 	fmt.Printf("\n")
 }
