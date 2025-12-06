@@ -50,7 +50,7 @@ func TestDatabaseConfig_URL(t *testing.T) {
 				DBName:   "testdb",
 				SSLMode:  "prefer",
 			},
-			expected: "postgres://postgres:postgres@::1:5432/testdb?sslmode=prefer&search_path=public",
+			expected: "postgres://postgres:postgres@[::1]:5432/testdb?sslmode=prefer&search_path=public",
 		},
 		{
 			name: "with empty password",
@@ -115,7 +115,19 @@ func TestDatabaseConfig_DSN(t *testing.T) {
 				DBName:   "production",
 				SSLMode:  "require",
 			},
-			expected: "host=db.example.com port=5433 user=admin password=p@ss w0rd! dbname=production sslmode=require",
+			expected: "host=db.example.com port=5433 user=admin password='p@ss w0rd!' dbname=production sslmode=require",
+		},
+		{
+			name: "with single quotes in password",
+			config: DatabaseConfig{
+				Host:     "localhost",
+				Port:     5432,
+				User:     "testuser",
+				Password: "pass'word",
+				DBName:   "testdb",
+				SSLMode:  "disable",
+			},
+			expected: "host=localhost port=5432 user=testuser password='pass''word' dbname=testdb sslmode=disable",
 		},
 	}
 

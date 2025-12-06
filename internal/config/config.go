@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 
@@ -69,16 +70,51 @@ func (s *ServerConfig) Address() string {
 	return fmt.Sprintf("%s:%d", s.Host, s.Port)
 }
 
+// quoteDSNValue quotes a DSN value if it contains spaces or special characters.
+// Single quotes inside the value are escaped by doubling them.
+func quoteDSNValue(value string) string {
+	// Check if value needs quoting (contains spaces or special characters)
+	needsQuoting := false
+	for _, r := range value {
+		if r == ' ' || r == '\'' || r == '\\' || r == '=' {
+			needsQuoting = true
+			break
+		}
+		// Quote if contains any non-alphanumeric character except common safe ones
+		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') ||
+			r == '.' || r == '-' || r == '_' || r == '/' || r == '@' || r == ':') {
+			needsQuoting = true
+			break
+		}
+	}
+
+	if !needsQuoting {
+		return value
+	}
+
+	// Escape single quotes by doubling them
+	escaped := ""
+	for _, r := range value {
+		if r == '\'' {
+			escaped += "''"
+		} else {
+			escaped += string(r)
+		}
+	}
+
+	return "'" + escaped + "'"
+}
+
 // DSN returns the database connection string
 func (d *DatabaseConfig) DSN() string {
 	return fmt.Sprintf(
 		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
-		d.Host,
+		quoteDSNValue(d.Host),
 		d.Port,
-		d.User,
-		d.Password,
-		d.DBName,
-		d.SSLMode,
+		quoteDSNValue(d.User),
+		quoteDSNValue(d.Password),
+		quoteDSNValue(d.DBName),
+		quoteDSNValue(d.SSLMode),
 	)
 }
 
@@ -87,11 +123,14 @@ func (d *DatabaseConfig) URL() string {
 	// Use url.UserPassword to properly percent-encode username and password
 	userInfo := url.UserPassword(d.User, d.Password)
 
+	// Use net.JoinHostPort to properly handle IPv6 addresses (wraps them in brackets)
+	host := net.JoinHostPort(d.Host, fmt.Sprintf("%d", d.Port))
+
 	// Build URL with proper encoding
 	u := &url.URL{
 		Scheme:   "postgres",
 		User:     userInfo,
-		Host:     fmt.Sprintf("%s:%d", d.Host, d.Port),
+		Host:     host,
 		Path:     "/" + d.DBName,
 		RawQuery: fmt.Sprintf("sslmode=%s&search_path=public", url.QueryEscape(d.SSLMode)),
 	}

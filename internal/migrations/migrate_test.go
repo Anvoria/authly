@@ -2,6 +2,7 @@ package migrations
 
 import (
 	"database/sql"
+	"runtime"
 	"testing"
 
 	"github.com/Anvoria/authly/internal/config"
@@ -176,7 +177,7 @@ func TestRunMigrations_PathResolution(t *testing.T) {
 
 // Helper function to test runtime.Caller
 func getCurrentFilePath() (pc uintptr, file string, line int, ok bool) {
-	return 0, "/path/to/migrations/migrate_test.go", 0, true
+	return runtime.Caller(0)
 }
 
 // BenchmarkRunMigrations_URLGeneration benchmarks URL generation

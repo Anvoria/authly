@@ -36,14 +36,27 @@ func (m *MockAuthService) Register(req user.RegisterRequest) (*user.UserResponse
 	return args.Get(0).(*user.UserResponse), args.Error(1)
 }
 
+// stubAuthService is a lightweight stub that returns harmless errors
+// Used in tests where we just need to avoid nil pointer dereference
+type stubAuthService struct{}
+
+func (s *stubAuthService) Login(username, password, userAgent, ip string) (*LoginResponse, error) {
+	return nil, ErrInvalidCredentials
+}
+
+func (s *stubAuthService) Register(req user.RegisterRequest) (*user.UserResponse, error) {
+	return nil, errors.New("stub service: not implemented")
+}
+
 // TestNewHandler tests handler creation
 func TestNewHandler(t *testing.T) {
-	handler := NewHandler((*Service)(nil))
+	mockService := new(MockAuthService)
+	handler := NewHandler(mockService)
 
 	assert.NotNil(t, handler, "Handler should not be nil")
 
 	// Test with actual mock
-	handler = &Handler{authService: (*Service)(nil)}
+	handler = &Handler{authService: mockService}
 	assert.NotNil(t, handler)
 }
 
@@ -51,8 +64,8 @@ func TestNewHandler(t *testing.T) {
 func TestHandler_Login(t *testing.T) {
 	t.Run("successful login", func(t *testing.T) {
 		_ = fiber.New()
-		_ = new(MockAuthService)
-		_ = &Handler{authService: (*Service)(nil)}
+		mockService := new(MockAuthService)
+		_ = &Handler{authService: mockService}
 
 		userID := uuid.New()
 		sessionID := uuid.New()
@@ -87,7 +100,9 @@ func TestHandler_Login(t *testing.T) {
 
 	t.Run("login with invalid JSON", func(t *testing.T) {
 		app := fiber.New()
-		handler := &Handler{authService: (*Service)(nil)}
+		// Use stub service - JSON parsing should fail before service is called
+		stubService := &stubAuthService{}
+		handler := &Handler{authService: stubService}
 
 		app.Post("/auth/login", handler.Login)
 
@@ -102,11 +117,14 @@ func TestHandler_Login(t *testing.T) {
 
 	t.Run("login with missing fields", func(t *testing.T) {
 		app := fiber.New()
-		handler := &Handler{authService: (*Service)(nil)}
+		// Use stub service that returns harmless error if called
+		// The handler should return 401 Unauthorized if Login is called with empty password
+		stubService := &stubAuthService{}
+		handler := &Handler{authService: stubService}
 
 		app.Post("/auth/login", handler.Login)
 
-		// Missing password
+		// Missing password - BodyParser will succeed but password will be empty
 		loginReq := map[string]interface{}{
 			"username": "testuser",
 		}
@@ -115,8 +133,10 @@ func TestHandler_Login(t *testing.T) {
 		req := httptest.NewRequest("POST", "/auth/login", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
 
-		// Document expected behavior
-		assert.NotEmpty(t, body)
+		resp, err := app.Test(req)
+		require.NoError(t, err)
+		// Handler will call Login with empty password, stub returns error, handler returns 401
+		assert.Equal(t, fiber.StatusUnauthorized, resp.StatusCode)
 	})
 
 	t.Run("login with invalid credentials", func(t *testing.T) {
@@ -129,7 +149,8 @@ func TestHandler_Login(t *testing.T) {
 func TestHandler_Register(t *testing.T) {
 	t.Run("successful registration", func(t *testing.T) {
 		_ = fiber.New()
-		_ = &Handler{authService: (*Service)(nil)}
+		mockService := new(MockAuthService)
+		_ = &Handler{authService: mockService}
 
 		registerReq := user.RegisterRequest{
 			Username:  "newuser",
@@ -154,7 +175,9 @@ func TestHandler_Register(t *testing.T) {
 
 	t.Run("registration with invalid JSON", func(t *testing.T) {
 		app := fiber.New()
-		handler := &Handler{authService: (*Service)(nil)}
+		// Use stub service - JSON parsing should fail before service is called
+		stubService := &stubAuthService{}
+		handler := &Handler{authService: stubService}
 
 		app.Post("/auth/register", handler.Register)
 
@@ -367,7 +390,8 @@ func TestHandler_ValidationScenarios(t *testing.T) {
 // BenchmarkHandler_Login benchmarks the login handler
 func BenchmarkHandler_Login(b *testing.B) {
 	app := fiber.New()
-	handler := &Handler{authService: (*Service)(nil)}
+	mockService := new(MockAuthService)
+	handler := &Handler{authService: mockService}
 
 	app.Post("/login", handler.Login)
 
@@ -389,7 +413,8 @@ func BenchmarkHandler_Login(b *testing.B) {
 // BenchmarkHandler_Register benchmarks the register handler
 func BenchmarkHandler_Register(b *testing.B) {
 	app := fiber.New()
-	handler := &Handler{authService: (*Service)(nil)}
+	mockService := new(MockAuthService)
+	handler := &Handler{authService: mockService}
 
 	app.Post("/register", handler.Register)
 

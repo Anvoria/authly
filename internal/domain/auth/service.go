@@ -16,6 +16,12 @@ type LoginResponse struct {
 	User         *user.UserResponse `json:"user"`
 }
 
+// AuthService defines the interface for authentication operations
+type AuthService interface {
+	Login(username, password, userAgent, ip string) (*LoginResponse, error)
+	Register(req user.RegisterRequest) (*user.UserResponse, error)
+}
+
 // Service handles authentication operations
 type Service struct {
 	Users    user.Repository
