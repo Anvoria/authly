@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 var (
@@ -85,7 +86,10 @@ func (s *service) Create(userID uuid.UUID, userAgent, ip string, ttl time.Durati
 func (s *service) Validate(id uuid.UUID, secret string) (*Session, error) {
 	sess, err := s.repo.FindByID(id)
 	if err != nil {
-		return nil, ErrInvalidSession
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrInvalidSession
+		}
+		return nil, err
 	}
 
 	if sess.Revoked {

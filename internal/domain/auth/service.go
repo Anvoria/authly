@@ -1,11 +1,13 @@
 package auth
 
 import (
+	"errors"
 	"time"
 
 	"github.com/Anvoria/authly/internal/domain/session"
 	"github.com/Anvoria/authly/internal/domain/user"
 	"github.com/lestrrat-go/jwx/v3/jwt"
+	"gorm.io/gorm"
 )
 
 // LoginResponse represents the response from a successful login
@@ -68,7 +70,10 @@ func (s *Service) GenerateAccessToken(sub, sid string, aud []string) (string, er
 func (s *Service) Login(username, password, userAgent, ip string) (*LoginResponse, error) {
 	u, err := s.Users.FindByUsername(username)
 	if err != nil {
-		return nil, ErrInvalidCredentials
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrInvalidCredentials
+		}
+		return nil, err
 	}
 
 	if !user.VerifyPassword(password, u.Password) {

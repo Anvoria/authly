@@ -1,5 +1,11 @@
 package service
 
+import (
+	"errors"
+
+	"gorm.io/gorm"
+)
+
 // ServiceInterface defines the interface for service operations
 type ServiceInterface interface {
 	Create(code, name, description string) (*Service, error)
@@ -24,8 +30,12 @@ func NewService(repo Repository) ServiceInterface {
 // Create creates a new service
 func (s *serviceImpl) Create(code, name, description string) (*Service, error) {
 	// Check if code already exists
-	if _, err := s.repo.FindByCode(code); err == nil {
+	_, err := s.repo.FindByCode(code)
+	if err == nil {
 		return nil, ErrServiceCodeExists
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
 	}
 
 	svc := &Service{
@@ -47,7 +57,10 @@ func (s *serviceImpl) Create(code, name, description string) (*Service, error) {
 func (s *serviceImpl) FindByID(id string) (*Service, error) {
 	svc, err := s.repo.FindByID(id)
 	if err != nil {
-		return nil, ErrServiceNotFound
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrServiceNotFound
+		}
+		return nil, err
 	}
 	return svc, nil
 }
@@ -56,7 +69,10 @@ func (s *serviceImpl) FindByID(id string) (*Service, error) {
 func (s *serviceImpl) FindByCode(code string) (*Service, error) {
 	svc, err := s.repo.FindByCode(code)
 	if err != nil {
-		return nil, ErrServiceNotFound
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrServiceNotFound
+		}
+		return nil, err
 	}
 	return svc, nil
 }
@@ -76,7 +92,10 @@ func (s *serviceImpl) FindActive() ([]*Service, error) {
 func (s *serviceImpl) Update(id string, name, description *string, active *bool) (*Service, error) {
 	svc, err := s.repo.FindByID(id)
 	if err != nil {
-		return nil, ErrServiceNotFound
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrServiceNotFound
+		}
+		return nil, err
 	}
 
 	if name != nil {

@@ -72,8 +72,9 @@ func (r *repository) Update(service *Service) error {
 	}
 
 	if existing.IsSystem {
-		service.Code = existing.Code
-		service.IsSystem = true
+		if service.Code != existing.Code || service.IsSystem != existing.IsSystem {
+			return ErrCannotUpdateSystemService
+		}
 	}
 
 	updates := map[string]any{
@@ -87,10 +88,7 @@ func (r *repository) Update(service *Service) error {
 		updates["is_system"] = service.IsSystem
 	}
 
-	if err := r.db.Model(&Service{}).Where("id = ?", service.ID).Updates(updates).Error; err != nil {
-		return err
-	}
-	return nil
+	return r.db.Model(&Service{}).Where("id = ?", service.ID).Updates(updates).Error
 }
 
 // Delete deletes a service (soft delete)
