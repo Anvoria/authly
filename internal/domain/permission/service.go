@@ -31,6 +31,9 @@ type ServiceInterface interface {
 
 	// IncrementPermissionVersion increments permission version (invalidates tokens)
 	IncrementPermissionVersion(userID string) error
+
+	// GetPermissionVersion gets the current permission version for a user
+	GetPermissionVersion(userID string) (int, error)
 }
 
 // serviceImpl implements ServiceInterface
@@ -206,4 +209,17 @@ func (s *serviceImpl) HasPermission(userID, serviceID, resource string, bit uint
 // IncrementPermissionVersion increments permission version (invalidates tokens)
 func (s *serviceImpl) IncrementPermissionVersion(userID string) error {
 	return s.repo.IncrementPermissionVersion(userID)
+}
+
+// GetPermissionVersion gets the current permission version for a user
+func (s *serviceImpl) GetPermissionVersion(userID string) (int, error) {
+	userPerms, err := s.repo.FindUserPermissionsByUserID(userID)
+	if err != nil {
+		return 1, err // Default to 1 if error
+	}
+	if len(userPerms) == 0 {
+		return 1, nil // Default to 1 if no permissions
+	}
+	// All permissions should have the same version, so return the first one
+	return userPerms[0].PermissionV, nil
 }

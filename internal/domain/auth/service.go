@@ -4,6 +4,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/Anvoria/authly/internal/domain/permission"
 	"github.com/Anvoria/authly/internal/domain/session"
 	"github.com/Anvoria/authly/internal/domain/user"
 	"github.com/lestrrat-go/jwx/v3/jwt"
@@ -27,25 +28,57 @@ type AuthService interface {
 
 // Service handles authentication operations
 type Service struct {
-	Users    user.Repository
-	Sessions session.Service
-	KeyStore *KeyStore
-	issuer   string
+	Users             user.Repository
+	Sessions          session.Service
+	PermissionService permission.ServiceInterface
+	KeyStore          *KeyStore
+	issuer            string
 }
 
 // NewService creates a new auth service
-func NewService(users user.Repository, sessions session.Service, keyStore *KeyStore, issuer string) *Service {
+func NewService(users user.Repository, sessions session.Service, permService permission.ServiceInterface, keyStore *KeyStore, issuer string) *Service {
 	return &Service{
-		Users:    users,
-		Sessions: sessions,
-		KeyStore: keyStore,
-		issuer:   issuer,
+		Users:             users,
+		Sessions:          sessions,
+		PermissionService: permService,
+		KeyStore:          keyStore,
+		issuer:            issuer,
 	}
 }
 
-func (s *Service) GenerateAccessToken(sub, sid string, aud []string) (string, error) {
+// BuildAudience builds audience list from scopes
+// Returns list of service codes that user has access to
+// Scopes format: "service" or "service:resource"
+func BuildAudience(scopes map[string]uint64) []string {
+	audMap := make(map[string]bool)
+	for scopeKey := range scopes {
+		// Extract service code from scope key (format: "service" or "service:resource")
+		serviceCode := scopeKey
+		// Find first colon to extract service code
+		for i := 0; i < len(scopeKey); i++ {
+			if scopeKey[i] == ':' {
+				serviceCode = scopeKey[:i]
+				break
+			}
+		}
+		if serviceCode != "" {
+			audMap[serviceCode] = true
+		}
+	}
+
+	aud := make([]string, 0, len(audMap))
+	for serviceCode := range audMap {
+		aud = append(aud, serviceCode)
+	}
+	return aud
+}
+
+func (s *Service) GenerateAccessToken(sub, sid string, scopes map[string]uint64, pver int) (string, error) {
 	now := time.Now()
 	exp := now.Add(15 * time.Minute)
+
+	// Build audience from scopes
+	aud := BuildAudience(scopes)
 
 	// Build token
 	token, err := jwt.NewBuilder().
@@ -55,6 +88,8 @@ func (s *Service) GenerateAccessToken(sub, sid string, aud []string) (string, er
 		IssuedAt(now).
 		Expiration(exp).
 		Claim("sid", sid).
+		Claim("scopes", scopes).
+		Claim("pver", pver).
 		Build()
 	if err != nil {
 		return "", err
@@ -81,14 +116,25 @@ func (s *Service) Login(username, password, userAgent, ip string) (*LoginRespons
 		return nil, ErrInvalidCredentials
 	}
 
-	// TODO: Scopes
+	// Build scopes from user permissions
+	scopes, err := s.PermissionService.BuildScopes(u.ID.String())
+	if err != nil {
+		return nil, err
+	}
+
+	// Get permission version (for cache invalidation)
+	pver, err := s.PermissionService.GetPermissionVersion(u.ID.String())
+	if err != nil {
+		// Default to 1 if error
+		pver = 1
+	}
 
 	sid, secret, err := s.Sessions.Create(u.ID, userAgent, ip, 24*time.Hour)
 	if err != nil {
 		return nil, err
 	}
 
-	access, err := s.GenerateAccessToken(u.ID.String(), sid.String(), []string{"api"})
+	access, err := s.GenerateAccessToken(u.ID.String(), sid.String(), scopes, pver)
 	if err != nil {
 		return nil, err
 	}
