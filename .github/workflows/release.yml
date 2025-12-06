@@ -37,7 +37,6 @@ jobs:
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             VERSION="${{ github.event.inputs.version }}"
           else
-            # Extract version from tag (remove 'v' prefix if present)
             TAG_NAME="${{ github.ref_name }}"
             VERSION="${TAG_NAME#v}"
           fi
@@ -55,6 +54,25 @@ jobs:
         run: |
           GIT_COMMIT=$(git rev-parse --short HEAD)
           echo "git_commit=${GIT_COMMIT}" >> $GITHUB_OUTPUT
+
+      - name: Get previous tag
+        id: prev_tag
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ || true)
+          echo "prev_tag=${PREV_TAG}" >> $GITHUB_OUTPUT
+          echo "Previous tag: ${PREV_TAG}"
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          if [ -z "${{ steps.prev_tag.outputs.prev_tag }}" ]; then
+            CHANGELOG=$(git log --pretty=format:"* %s (%h)")
+          else
+            CHANGELOG=$(git log ${{ steps.prev_tag.outputs.prev_tag }}..HEAD --pretty=format:"* %s (%h)")
+          fi
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "${CHANGELOG}" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Build binary
         run: |
@@ -85,12 +103,15 @@ jobs:
           name: Release ${{ steps.version.outputs.version }}
           body: |
             ## Release ${{ steps.version.outputs.version }}
-            
+
+            ### Changelog
+            ${{ steps.changelog.outputs.changelog }}
+
             **Build Information:**
             - Version: ${{ steps.version.outputs.version }}
             - Build Time: ${{ steps.build_time.outputs.build_time }}
             - Git Commit: ${{ steps.git_commit.outputs.git_commit }}
-            
+
             **Downloads:**
             - Binary: `authly-${{ steps.version.outputs.version }}-linux-amd64.tar.gz`
             - Checksum: `authly-${{ steps.version.outputs.version }}-linux-amd64.tar.gz.sha256`
