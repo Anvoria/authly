@@ -24,7 +24,7 @@ type Service struct {
 	issuer   string
 }
 
-// NewService creates a new auth service
+// NewService creates a new Service configured with the provided users repository, session service, keystore, and issuer.
 func NewService(users user.Repository, sessions session.Service, keyStore *KeyStore, issuer string) *Service {
 	return &Service{
 		Users:    users,

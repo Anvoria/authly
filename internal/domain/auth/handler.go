@@ -18,6 +18,7 @@ type Handler struct {
 	authService *Service
 }
 
+// NewHandler creates a Handler with its authService field set to the provided Service.
 func NewHandler(s *Service) *Handler {
 	return &Handler{authService: s}
 }

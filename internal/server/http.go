@@ -10,7 +10,9 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// Start initializes and starts the HTTP server
+// Start initializes and starts the HTTP server.
+// It configures logging, connects to the database, runs migrations, loads environment configuration, sets up routes, and starts the Fiber app listening on the configured address.
+// It returns an error if any startup step fails.
 func Start(cfg *config.Config) error {
 	initLogger(cfg.Logging.Level)
 

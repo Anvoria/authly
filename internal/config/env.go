@@ -38,7 +38,10 @@ type Environment struct {
 }
 
 // LoadEnv loads the environment variables
-// It first tries to load from .env file, then falls back to system environment variables
+// LoadEnv loads application environment settings into an Environment struct.
+// It attempts to read a .env file, then reads ENVIRONMENT, CONFIG_PATH, and JWT_SECRET from the environment,
+// normalizes and validates ENVIRONMENT (defaults to "development" when invalid), and returns a pointer to the populated Environment
+// (ConfigPath defaults to "config.yaml", JWTSecret defaults to an empty string).
 func LoadEnv() *Environment {
 	_ = godotenv.Load()
 
@@ -59,7 +62,7 @@ func LoadEnv() *Environment {
 	}
 }
 
-// getEnv gets the environment variable with a default value
+// getEnv retrieves the environment variable named by key and returns defaultValue when the variable is unset or empty.
 func getEnv(key, defaultValue string) string {
 	value := os.Getenv(key)
 	if value != "" {

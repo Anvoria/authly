@@ -17,6 +17,13 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwk"
 )
 
+// main is the CLI entry point for the keys management tool.
+// It loads environment and application configuration, validates command-line
+// arguments, and dispatches one of three subcommands:
+//   - generate: create a new RSA key pair and store PEM files.
+//   - list: list available keys and indicate the active key.
+//   - set-active: print instructions to mark a key as active (requires a key ID).
+// On invalid or missing arguments the command prints usage or an error and exits.
 func main() {
 	if len(os.Args) < 2 {
 		printUsage()
@@ -50,6 +57,8 @@ func main() {
 	}
 }
 
+// printUsage prints the CLI usage message and a summary of available commands.
+// It documents the "generate" command (with -kid, -bits, -path options), the "list" command, and the "set-active" command.
 func printUsage() {
 	fmt.Fprintf(os.Stderr, "Usage: %s <command> [options]\n\n", os.Args[0])
 	fmt.Fprintf(os.Stderr, "Commands:\n")
@@ -61,6 +70,14 @@ func printUsage() {
 	fmt.Fprintf(os.Stderr, "  set-active <kid>      Set active key ID\n")
 }
 
+// generateKey creates an RSA key pair identified by the required -kid flag and writes
+// a private PEM file (PKCS#1) and a public PEM file (PKIX) into keysPath or a
+// path supplied with -path. It validates flags (allowed key sizes: 2048, 3072,
+// 4096), ensures the target directory exists and is writable, and prints the
+// created file paths, key ID, and key size.
+//
+// The private file is written with mode 0600 and the public file with mode 0644.
+// On validation, generation, or I/O errors the process exits with code 1.
 func generateKey(keysPath string) {
 	fs := flag.NewFlagSet("generate", flag.ExitOnError)
 	kid := fs.String("kid", "", "Key ID (required)")
@@ -170,6 +187,14 @@ func generateKey(keysPath string) {
 	fmt.Printf("  Key size:    %d bits\n", *bits)
 }
 
+// listKeys prints information about RSA keys found in the given keysPath and marks which key is active.
+// 
+// It expects keysPath to be a directory containing key files and activeKID may be supplied with or
+// without the "key-" prefix. If the directory does not exist or keys cannot be loaded, an error
+// message is printed. For each discovered key the function prints the key ID (kid), appends
+// " (ACTIVE)" for the active key, shows the public key size in bits, and shows the corresponding
+// private and public PEM file names (private-<kid>.pem and public-<kid>.pem). The provided activeKID
+// is printed at the end.
 func listKeys(keysPath, activeKID string) {
 	// Check if directory exists
 	info, err := os.Stat(keysPath)
@@ -234,6 +259,11 @@ func listKeys(keysPath, activeKID string) {
 	fmt.Printf("Active KID: %s\n", activeKID)
 }
 
+// setActiveKey verifies a key with the provided short ID exists and prints a configuration snippet to mark it as the active key.
+//
+// If the keys cannot be loaded or the specified key is not found, the process exits with status 1.
+//
+// The `kid` parameter is the key identifier without the "key-" prefix. The function prints the config path and the values to set for `auth.keys_path` and `auth.active_kid`.
 func setActiveKey(cfg *config.Config, kid string) {
 	keyStore, err := auth.LoadKeys(cfg.Auth.KeysPath, cfg.Auth.ActiveKID)
 	if err != nil {

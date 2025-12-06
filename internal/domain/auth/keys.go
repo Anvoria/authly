@@ -18,6 +18,12 @@ type KeyStore struct {
 	KeySet    jwk.Set
 }
 
+// LoadKeys loads RSA private/public key pairs from the directory at path, converts them to JWKs,
+// and returns a KeyStore containing the provided activeKid and a jwk.Set of the loaded keys.
+// It expects private keys named `private-<kid>.pem` with corresponding `public-<kid>.pem` files;
+// each loaded key is assigned the key ID `key-<kid>` and algorithm RS256.
+// Returns an error if the path is not accessible or a directory, if files cannot be read or decoded,
+// if keys cannot be parsed or are not RSA, or if a key cannot be converted to or added as a JWK.
 func LoadKeys(path, activeKid string) (*KeyStore, error) {
 	info, err := os.Stat(path)
 	if err != nil {

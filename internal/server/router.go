@@ -12,7 +12,10 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// SetupRoutes sets up the routes for the application
+// SetupRoutes configures the application's HTTP routes and authentication infrastructure.
+// It creates the /v1 API group, initializes repositories and services, loads the configured key store and active key,
+// registers the /v1/auth/login route and the /.well-known/jwks.json JWKS endpoint.
+// Returns an error if the key store cannot be loaded or the configured active key is not found.
 func SetupRoutes(app *fiber.App, envConfig *config.Environment, cfg *config.Config) error {
 	api := app.Group("/v1")
 
