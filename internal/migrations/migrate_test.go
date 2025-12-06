@@ -2,7 +2,6 @@ package migrations
 
 import (
 	"database/sql"
-	"fmt"
 	"testing"
 
 	"github.com/Anvoria/authly/internal/config"
@@ -124,7 +123,7 @@ func TestRunMigrations_ErrorHandling(t *testing.T) {
 				assert.NotNil(t, r)
 			}
 		}()
-		
+
 		var cfg *config.Config
 		err := RunMigrations(cfg)
 		// If we get here without panic, it should still error
@@ -140,7 +139,7 @@ func TestMigrationIdempotency(t *testing.T) {
 		// This test documents that migrations should be idempotent
 		// The actual RunMigrations function handles ErrNoChange gracefully
 		// When migrations are already applied, it should return nil (not an error)
-		
+
 		// This is a documentation test that verifies the expected behavior
 		// In a real scenario with a test database, running migrations twice
 		// should not cause errors

@@ -5,15 +5,47 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Anvoria/authly/internal/domain/user"
 	"github.com/Anvoria/authly/internal/utils"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 func setupTestDB(t *testing.T) *gorm.DB {
-	db := utils.SetupTestDB(t, &Session{})
+	db := utils.SetupTestDB(t, &user.User{}, &Session{})
 	db.Exec("DELETE FROM sessions")
+	db.Exec("DELETE FROM users")
 	return db
+}
+
+func createTestUser(t *testing.T, db *gorm.DB, userID uuid.UUID) *user.User {
+	testUser := &user.User{
+		Username:  "testuser_" + userID.String()[:8],
+		FirstName: "Test",
+		LastName:  "User",
+		Email:     "test_" + userID.String()[:8] + "@example.com",
+		Password:  "hashedpassword",
+		IsActive:  true,
+	}
+	// Use GORM to create with specific ID
+	if err := db.Table("users").Create(map[string]interface{}{
+		"id":         userID,
+		"username":   testUser.Username,
+		"first_name": testUser.FirstName,
+		"last_name":  testUser.LastName,
+		"email":      testUser.Email,
+		"password":   testUser.Password,
+		"is_active":  testUser.IsActive,
+	}).Error; err != nil {
+		t.Fatalf("Failed to create test user: %v", err)
+	}
+	// Fetch the created user to return proper struct
+	userRepo := user.NewRepository(db)
+	createdUser, err := userRepo.FindByID(userID.String())
+	if err != nil {
+		t.Fatalf("Failed to find created user: %v", err)
+	}
+	return createdUser
 }
 
 func TestService_Create(t *testing.T) {
@@ -22,6 +54,7 @@ func TestService_Create(t *testing.T) {
 	service := NewService(repo)
 
 	userID := uuid.New()
+	createTestUser(t, db, userID)
 	userAgent := "Mozilla/5.0"
 	ip := "192.168.1.1"
 	ttl := 24 * time.Hour
@@ -73,6 +106,7 @@ func TestService_Validate(t *testing.T) {
 	service := NewService(repo)
 
 	userID := uuid.New()
+	createTestUser(t, db, userID)
 	userAgent := "Mozilla/5.0"
 	ip := "192.168.1.1"
 	ttl := 24 * time.Hour
@@ -146,6 +180,7 @@ func TestService_Validate_ExpiredSession(t *testing.T) {
 	service := NewService(repo)
 
 	userID := uuid.New()
+	createTestUser(t, db, userID)
 	userAgent := "Mozilla/5.0"
 	ip := "192.168.1.1"
 	ttl := -1 * time.Hour
@@ -173,6 +208,7 @@ func TestService_Validate_RevokedSession(t *testing.T) {
 	service := NewService(repo)
 
 	userID := uuid.New()
+	createTestUser(t, db, userID)
 	userAgent := "Mozilla/5.0"
 	ip := "192.168.1.1"
 	ttl := 24 * time.Hour
@@ -204,6 +240,7 @@ func TestService_Rotate(t *testing.T) {
 	service := NewService(repo)
 
 	userID := uuid.New()
+	createTestUser(t, db, userID)
 	userAgent := "Mozilla/5.0"
 	ip := "192.168.1.1"
 	ttl := 24 * time.Hour
@@ -250,6 +287,7 @@ func TestService_Rotate_InvalidSecret(t *testing.T) {
 	service := NewService(repo)
 
 	userID := uuid.New()
+	createTestUser(t, db, userID)
 	userAgent := "Mozilla/5.0"
 	ip := "192.168.1.1"
 	ttl := 24 * time.Hour
@@ -277,6 +315,7 @@ func TestService_Rotate_ReplayDetection(t *testing.T) {
 	service := NewService(repo)
 
 	userID := uuid.New()
+	createTestUser(t, db, userID)
 	userAgent := "Mozilla/5.0"
 	ip := "192.168.1.1"
 	ttl := 24 * time.Hour
@@ -317,6 +356,7 @@ func TestService_Revoke(t *testing.T) {
 	service := NewService(repo)
 
 	userID := uuid.New()
+	createTestUser(t, db, userID)
 	userAgent := "Mozilla/5.0"
 	ip := "192.168.1.1"
 	ttl := 24 * time.Hour

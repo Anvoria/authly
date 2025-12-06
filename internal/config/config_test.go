@@ -357,7 +357,7 @@ func TestDatabaseConfig_URL_MigrationCompatibility(t *testing.T) {
 		assert.Contains(t, url, "postgres://", "Should use postgres:// scheme")
 		assert.Contains(t, url, "search_path=public", "Should specify search_path")
 		assert.Contains(t, url, "sslmode=", "Should include sslmode")
-		
+
 		// Verify structure
 		assert.Regexp(t, `^postgres://[^:]+:[^@]*@[^/]+/[^?]+\?.*$`, url, "Should match URL pattern")
 	})

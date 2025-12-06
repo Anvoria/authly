@@ -38,11 +38,10 @@ func (m *MockAuthService) Register(req user.RegisterRequest) (*user.UserResponse
 
 // TestNewHandler tests handler creation
 func TestNewHandler(t *testing.T) {
-	mockService := new(MockAuthService)
 	handler := NewHandler((*Service)(nil))
 
 	assert.NotNil(t, handler, "Handler should not be nil")
-	
+
 	// Test with actual mock
 	handler = &Handler{authService: (*Service)(nil)}
 	assert.NotNil(t, handler)
@@ -51,9 +50,9 @@ func TestNewHandler(t *testing.T) {
 // TestHandler_Login tests the Login handler
 func TestHandler_Login(t *testing.T) {
 	t.Run("successful login", func(t *testing.T) {
-		app := fiber.New()
-		mockService := new(MockAuthService)
-		handler := &Handler{authService: (*Service)(nil)}
+		_ = fiber.New()
+		_ = new(MockAuthService)
+		_ = &Handler{authService: (*Service)(nil)}
 
 		userID := uuid.New()
 		sessionID := uuid.New()
@@ -129,8 +128,8 @@ func TestHandler_Login(t *testing.T) {
 // TestHandler_Register tests the Register handler
 func TestHandler_Register(t *testing.T) {
 	t.Run("successful registration", func(t *testing.T) {
-		app := fiber.New()
-		handler := &Handler{authService: (*Service)(nil)}
+		_ = fiber.New()
+		_ = &Handler{authService: (*Service)(nil)}
 
 		registerReq := user.RegisterRequest{
 			Username:  "newuser",

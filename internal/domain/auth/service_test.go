@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Anvoria/authly/internal/domain/session"
 	"github.com/Anvoria/authly/internal/domain/user"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -74,12 +75,12 @@ func (m *MockSessionService) Create(userID uuid.UUID, userAgent, ip string, ttl 
 	return args.Get(0).(uuid.UUID), args.Get(1).(string), args.Error(2)
 }
 
-func (m *MockSessionService) Validate(sid uuid.UUID, secret string) (*user.User, error) {
+func (m *MockSessionService) Validate(sid uuid.UUID, secret string) (*session.Session, error) {
 	args := m.Called(sid, secret)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*user.User), args.Error(1)
+	return args.Get(0).(*session.Session), args.Error(1)
 }
 
 func (m *MockSessionService) Rotate(sid uuid.UUID, oldSecret string, ttl time.Duration) (string, error) {
@@ -100,7 +101,7 @@ func TestNewService(t *testing.T) {
 
 	t.Run("creates service successfully", func(t *testing.T) {
 		service := NewService(mockUserRepo, mockSessionService, mockKeyStore, "test-issuer")
-		
+
 		assert.NotNil(t, service)
 		assert.Equal(t, mockUserRepo, service.Users)
 		assert.Equal(t, mockSessionService, service.Sessions)
@@ -111,7 +112,7 @@ func TestNewService(t *testing.T) {
 	t.Run("service fields are properly initialized", func(t *testing.T) {
 		issuer := "my-auth-service"
 		service := NewService(mockUserRepo, mockSessionService, mockKeyStore, issuer)
-		
+
 		assert.NotNil(t, service.Users, "Users repository should be set")
 		assert.NotNil(t, service.Sessions, "Sessions service should be set")
 		assert.NotNil(t, service.KeyStore, "KeyStore should be set")
