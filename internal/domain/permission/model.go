@@ -69,12 +69,30 @@ const (
 	BitAdmin  uint8 = 3 // Admin access
 )
 
+// Authly system management permission bits
+const (
+	BitManageServices    uint8 = 4 // Manage services (create, update, delete)
+	BitManagePermissions uint8 = 5 // Manage permissions
+	BitManageUsers       uint8 = 6 // Manage users
+	BitManageRoles       uint8 = 7 // Manage roles (for future use)
+	BitSystemAdmin       uint8 = 8 // Full system administration access
+)
+
 // Common permission names (can be extended per service)
 const (
 	PermRead   = "read"
 	PermWrite  = "write"
 	PermDelete = "delete"
 	PermAdmin  = "admin"
+)
+
+// Authly system management permission names
+const (
+	PermManageServices    = "manage_services"
+	PermManagePermissions = "manage_permissions"
+	PermManageUsers       = "manage_users"
+	PermManageRoles       = "manage_roles"
+	PermSystemAdmin       = "system_admin"
 )
 
 // SetBit sets a specific bit in a bitmask
