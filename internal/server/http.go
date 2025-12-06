@@ -30,7 +30,7 @@ func Start(cfg *config.Config) error {
 
 	envConfig := config.LoadEnv()
 	slog.Info("Environment loaded", "environment", envConfig.Environment.String())
-	if err := SetupRoutes(app, envConfig); err != nil {
+	if err := SetupRoutes(app, envConfig, cfg); err != nil {
 		slog.Error("Failed to setup routes", "error", err)
 		return err
 	}

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/Anvoria/authly/internal/config"
@@ -12,7 +13,7 @@ import (
 )
 
 // SetupRoutes sets up the routes for the application
-func SetupRoutes(app *fiber.App, envConfig *config.Environment) error {
+func SetupRoutes(app *fiber.App, envConfig *config.Environment, cfg *config.Config) error {
 	api := app.Group("/v1")
 
 	// Initialize repositories
@@ -22,7 +23,17 @@ func SetupRoutes(app *fiber.App, envConfig *config.Environment) error {
 	// Initialize services
 	sessionService := session.NewService(sessionRepo)
 
-	tokenGenerator := auth.NewTokenGenerator(privateKey, "authly", 15*time.Minute)
+	keyStore, err := auth.LoadKeys(cfg.Auth.KeysPath, cfg.Auth.ActiveKID)
+	if err != nil {
+		return fmt.Errorf("failed to load keys: %w", err)
+	}
+
+	activeKey := keyStore.GetActiveKey()
+	if activeKey == nil {
+		return fmt.Errorf("active key with KID %s not found in key store", cfg.Auth.ActiveKID)
+	}
+
+	tokenGenerator := auth.NewTokenGenerator(activeKey.PrivateKey, "authly", 15*time.Minute)
 
 	// Initialize auth service
 	authService := auth.NewService(userRepo, sessionService, tokenGenerator)

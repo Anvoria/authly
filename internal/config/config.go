@@ -11,6 +11,7 @@ import (
 type Config struct {
 	App      AppConfig      `yaml:"app"`
 	Server   ServerConfig   `yaml:"server"`
+	Auth     AuthConfig     `yaml:"auth"`
 	Database DatabaseConfig `yaml:"database"`
 	Logging  LoggingConfig  `yaml:"logging"`
 }
@@ -24,6 +25,12 @@ type AppConfig struct {
 type ServerConfig struct {
 	Host string `yaml:"host"`
 	Port int    `yaml:"port"`
+}
+
+// AuthConfig holds auth-specific configuration
+type AuthConfig struct {
+	KeysPath    string `yaml:"keys_path"`
+	ActiveKID   string `yaml:"active_kid"`
 }
 
 // DatabaseConfig holds database-specific configuration
