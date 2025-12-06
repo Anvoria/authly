@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/Anvoria/authly/internal/config"
@@ -22,12 +21,6 @@ func SetupRoutes(app *fiber.App, envConfig *config.Environment) error {
 
 	// Initialize services
 	sessionService := session.NewService(sessionRepo)
-
-	// Load RSA private key from environment
-	privateKey, err := config.LoadRSAPrivateKey(envConfig.PrivateKey, envConfig.Environment)
-	if err != nil {
-		return fmt.Errorf("failed to load RSA private key: %w", err)
-	}
 
 	tokenGenerator := auth.NewTokenGenerator(privateKey, "authly", 15*time.Minute)
 

@@ -1,11 +1,6 @@
 package config
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/x509"
-	"encoding/pem"
-	"fmt"
 	"os"
 	"strings"
 
@@ -40,7 +35,6 @@ type Environment struct {
 	Environment EnvironmentType `env:"ENVIRONMENT"`
 	ConfigPath  string          `env:"CONFIG_PATH"`
 	JWTSecret   string          `env:"JWT_SECRET"`
-	PrivateKey  string          `env:"PRIVATE_KEY"`
 }
 
 // LoadEnv loads the environment variables
@@ -62,7 +56,6 @@ func LoadEnv() *Environment {
 		Environment: envType,
 		ConfigPath:  getEnv("CONFIG_PATH", "config.yaml"),
 		JWTSecret:   getEnv("JWT_SECRET", ""),
-		PrivateKey:  getEnv("PRIVATE_KEY", ""),
 	}
 }
 
@@ -73,45 +66,4 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
-}
-
-// LoadRSAPrivateKey loads RSA private key from PEM string
-// If privateKeyPEM is empty and environment is production, returns an error
-// If privateKeyPEM is empty and environment is development, generates a new key
-func LoadRSAPrivateKey(privateKeyPEM string, env EnvironmentType) (*rsa.PrivateKey, error) {
-	if privateKeyPEM == "" {
-		if env == EnvironmentProduction {
-			return nil, fmt.Errorf("private key is required in production environment")
-		}
-
-		privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-		if err != nil {
-			return nil, fmt.Errorf("failed to generate private key: %w", err)
-		}
-		return privateKey, nil
-	}
-
-	block, _ := pem.Decode([]byte(privateKeyPEM))
-	if block == nil {
-		return nil, fmt.Errorf("failed to decode PEM block")
-	}
-
-	var key *rsa.PrivateKey
-	var err error
-
-	if key, err = x509.ParsePKCS1PrivateKey(block.Bytes); err == nil {
-		return key, nil
-	}
-
-	pkcs8Key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse private key: %w", err)
-	}
-
-	rsaKey, ok := pkcs8Key.(*rsa.PrivateKey)
-	if !ok {
-		return nil, fmt.Errorf("key is not an RSA private key")
-	}
-
-	return rsaKey, nil
 }
