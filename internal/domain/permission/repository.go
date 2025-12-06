@@ -28,7 +28,7 @@ type repository struct {
 	db *gorm.DB
 }
 
-// NewRepository creates a new permission repository
+// NewRepository creates a Repository backed by the provided *gorm.DB.
 func NewRepository(db *gorm.DB) Repository {
 	return &repository{db}
 }

@@ -9,6 +9,7 @@ type Handler struct {
 	serviceService ServiceInterface
 }
 
+// NewHandler creates a Handler configured with the provided ServiceInterface.
 func NewHandler(s ServiceInterface) *Handler {
 	return &Handler{serviceService: s}
 }

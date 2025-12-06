@@ -15,6 +15,7 @@ type Handler struct {
 	userService user.Service
 }
 
+// NewHandler creates a new Handler configured with the provided AuthService and user.Service.
 func NewHandler(s AuthService, userService user.Service) *Handler {
 	return &Handler{authService: s, userService: userService}
 }

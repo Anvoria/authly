@@ -54,7 +54,8 @@ type ServiceModel struct {
 	Code string
 }
 
-// NewService creates a new permission service
+// NewService returns a ServiceInterface backed by the provided Repository and ServiceRepository.
+// repo provides data access for user permission records; serviceRepo resolves service metadata such as service codes.
 func NewService(repo Repository, serviceRepo ServiceRepository) ServiceInterface {
 	return &serviceImpl{
 		repo:        repo,

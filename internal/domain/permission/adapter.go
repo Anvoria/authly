@@ -4,7 +4,8 @@ import (
 	svc "github.com/Anvoria/authly/internal/domain/service"
 )
 
-// NewServiceRepositoryAdapter creates an adapter from service.Repository to ServiceRepository
+// NewServiceRepositoryAdapter creates a ServiceRepository that wraps the provided svc.Repository.
+// The returned adapter delegates calls to the underlying repository and maps results to the permission ServiceModel.
 func NewServiceRepositoryAdapter(repo svc.Repository) ServiceRepository {
 	return &serviceRepositoryAdapter{repo: repo}
 }

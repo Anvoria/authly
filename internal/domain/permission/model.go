@@ -95,7 +95,8 @@ const (
 	PermSystemAdmin       = "system_admin"
 )
 
-// SetBit sets a specific bit in a bitmask
+// SetBit sets the specified bit position in bitmask and returns the resulting bitmask.
+// If bit is greater than 63 the original bitmask is returned unchanged.
 func SetBit(bitmask uint64, bit uint8) uint64 {
 	if bit > 63 {
 		return bitmask // return the bitmask unchanged if the bit is greater than 63
@@ -103,7 +104,8 @@ func SetBit(bitmask uint64, bit uint8) uint64 {
 	return bitmask | (1 << bit)
 }
 
-// ClearBit clears a specific bit in a bitmask
+// ClearBit clears the specified bit in bitmask and returns the resulting mask.
+// If bit is greater than 63 the original bitmask is returned unchanged.
 func ClearBit(bitmask uint64, bit uint8) uint64 {
 	if bit > 63 {
 		return bitmask // return the bitmask unchanged if the bit is greater than 63
@@ -111,7 +113,8 @@ func ClearBit(bitmask uint64, bit uint8) uint64 {
 	return bitmask &^ (1 << bit)
 }
 
-// HasBit checks if a specific bit is set in a bitmask
+// HasBit reports whether the specified bit index is set in bitmask.
+// If bit is greater than 63, it returns false.
 func HasBit(bitmask uint64, bit uint8) bool {
 	if bit > 63 {
 		return false
@@ -119,7 +122,8 @@ func HasBit(bitmask uint64, bit uint8) bool {
 	return (bitmask & (1 << bit)) != 0
 }
 
-// HasAny checks if any of the specified bits are set
+// HasAny reports whether any of the specified bit positions are set in the given bitmask.
+// If no bit positions are provided, it returns false.
 func HasAny(bitmask uint64, bits ...uint8) bool {
 	for _, bit := range bits {
 		if HasBit(bitmask, bit) {
@@ -129,7 +133,8 @@ func HasAny(bitmask uint64, bits ...uint8) bool {
 	return false
 }
 
-// HasAll checks if all of the specified bits are set
+// HasAll reports whether all specified bits are set in the given bitmask.
+// Bits with an index greater than 63 are treated as not set.
 func HasAll(bitmask uint64, bits ...uint8) bool {
 	for _, bit := range bits {
 		if !HasBit(bitmask, bit) {
