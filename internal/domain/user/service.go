@@ -14,6 +14,7 @@ var (
 // Service interface for user operations
 type Service interface {
 	Register(req RegisterRequest) (*User, error)
+	GetUserInfo(userID string) (*User, error)
 }
 
 // service struct for user operations
@@ -62,4 +63,8 @@ func (s *service) Register(req RegisterRequest) (*User, error) {
 	}
 
 	return user, nil
+}
+
+func (s *service) GetUserInfo(userID string) (*User, error) {
+	return s.repo.FindByID(userID)
 }

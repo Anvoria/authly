@@ -158,3 +158,36 @@ type ErrPublicKeyNotRSA struct {
 func (e *ErrPublicKeyNotRSA) Error() string {
 	return "public key in " + e.FileName + " is not an RSA key"
 }
+
+// Middleware errors
+var (
+	// ErrMissingAuthorizationHeader is returned when the Authorization header is missing
+	ErrMissingAuthorizationHeader = errors.New("missing authorization header")
+
+	// ErrInvalidAuthorizationHeader is returned when the Authorization header format is invalid
+	ErrInvalidAuthorizationHeader = errors.New("invalid authorization header")
+
+	// ErrMissingToken is returned when the token is missing from the Authorization header
+	ErrMissingToken = errors.New("missing token")
+
+	// ErrInvalidToken is returned when the token cannot be verified
+	ErrInvalidToken = errors.New("invalid token")
+
+	// ErrTokenExpiredOrInvalid is returned when the token is expired or invalid
+	ErrTokenExpiredOrInvalid = errors.New("token expired or invalid")
+
+	// ErrTokenValidationError is returned when there's an error validating the token
+	ErrTokenValidationError = errors.New("token validation error")
+
+	// ErrTokenRevoked is returned when the token has been revoked
+	ErrTokenRevoked = errors.New("token revoked")
+
+	// ErrUnauthorized is returned when the user is not authorized
+	ErrUnauthorized = errors.New("unauthorized")
+)
+
+// Handler errors
+var (
+	// ErrInvalidBody is returned when the request body is invalid
+	ErrInvalidBody = errors.New("invalid body")
+)

@@ -28,6 +28,7 @@ func SetupRoutes(app *fiber.App, envConfig *config.Environment, cfg *config.Conf
 	sessionService := session.NewService(sessionRepo)
 	serviceRepoAdapter := perm.NewServiceRepositoryAdapter(serviceRepo)
 	permissionService := perm.NewService(permissionRepo, serviceRepoAdapter)
+	userService := user.NewService(userRepo)
 
 	keyStore, err := auth.LoadKeys(cfg.Auth.KeysPath, cfg.Auth.ActiveKID)
 	if err != nil {
@@ -44,7 +45,7 @@ func SetupRoutes(app *fiber.App, envConfig *config.Environment, cfg *config.Conf
 
 	// Initialize auth service
 	authService := auth.NewService(userRepo, sessionService, permissionService, keyStore, cfg.App.Name)
-	authHandler := auth.NewHandler(authService)
+	authHandler := auth.NewHandler(authService, userService)
 
 	// Setup auth routes
 	authGroup := api.Group("/auth")
@@ -52,7 +53,8 @@ func SetupRoutes(app *fiber.App, envConfig *config.Environment, cfg *config.Conf
 	authGroup.Post("/register", authHandler.Register)
 
 	protectedGroup := api.Group("")
-	protectedGroup.Use(auth.AuthMiddleware(keyStore, authService, cfg.App.Name, []string{"api"}))
+	protectedGroup.Use(auth.AuthMiddleware(keyStore, authService, cfg.App.Name, []string{""}))
+	protectedGroup.Get("/user/info", authHandler.GetUserInfo)
 
 	app.Get("/.well-known/jwks.json", auth.JWKSHandler(keyStore))
 

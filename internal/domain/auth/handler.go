@@ -12,16 +12,17 @@ import (
 
 type Handler struct {
 	authService AuthService
+	userService user.Service
 }
 
-func NewHandler(s AuthService) *Handler {
-	return &Handler{authService: s}
+func NewHandler(s AuthService, userService user.Service) *Handler {
+	return &Handler{authService: s, userService: userService}
 }
 
 func (h *Handler) Login(c *fiber.Ctx) error {
 	var req user.LoginRequest
 	if err := c.BodyParser(&req); err != nil {
-		return utils.ErrorResponse(c, "invalid_body", fiber.StatusBadRequest)
+		return utils.ErrorResponse(c, ErrInvalidBody.Error(), fiber.StatusBadRequest)
 	}
 
 	res, err := h.authService.Login(
@@ -54,7 +55,7 @@ func (h *Handler) Login(c *fiber.Ctx) error {
 func (h *Handler) Register(c *fiber.Ctx) error {
 	var req user.RegisterRequest
 	if err := c.BodyParser(&req); err != nil {
-		return utils.ErrorResponse(c, "invalid_body", fiber.StatusBadRequest)
+		return utils.ErrorResponse(c, ErrInvalidBody.Error(), fiber.StatusBadRequest)
 	}
 
 	res, err := h.authService.Register(req)
@@ -65,4 +66,18 @@ func (h *Handler) Register(c *fiber.Ctx) error {
 	return utils.SuccessResponse(c, fiber.Map{
 		"user": res,
 	}, "User registered successfully")
+}
+
+func (h *Handler) GetUserInfo(c *fiber.Ctx) error {
+	identity := GetIdentity(c)
+	if identity == nil {
+		return utils.ErrorResponse(c, ErrUnauthorized.Error(), fiber.StatusUnauthorized)
+	}
+
+	userInfo, err := h.userService.GetUserInfo(identity.UserID)
+	if err != nil {
+		return utils.ErrorResponse(c, err.Error(), fiber.StatusInternalServerError)
+	}
+
+	return utils.SuccessResponse(c, userInfo.ToResponse(), "User info retrieved successfully")
 }
