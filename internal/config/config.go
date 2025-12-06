@@ -20,7 +20,8 @@ type Config struct {
 
 // AppConfig holds app-specific configuration
 type AppConfig struct {
-	Name string `yaml:"name"`
+	Name    string `yaml:"name"`
+	Version string `yaml:"version"`
 }
 
 // ServerConfig holds server-specific configuration

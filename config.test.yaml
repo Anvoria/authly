@@ -1,5 +1,6 @@
 app:
   name: "authly"
+  version: "0.2"
 
 server:
   host: "0.0.0.0"

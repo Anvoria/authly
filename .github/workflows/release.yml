@@ -1,0 +1,98 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release'
+        required: true
+        type: string
+
+jobs:
+  release:
+    name: Build and Release
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.25.4'
+          cache-dependency-path: go.sum
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            # Extract version from tag (remove 'v' prefix if present)
+            TAG_NAME="${{ github.ref_name }}"
+            VERSION="${TAG_NAME#v}"
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Version determined: ${VERSION}"
+
+      - name: Get build time
+        id: build_time
+        run: |
+          BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          echo "build_time=${BUILD_TIME}" >> $GITHUB_OUTPUT
+
+      - name: Get git commit
+        id: git_commit
+        run: |
+          GIT_COMMIT=$(git rev-parse --short HEAD)
+          echo "git_commit=${GIT_COMMIT}" >> $GITHUB_OUTPUT
+
+      - name: Build binary
+        run: |
+          go build -ldflags "\
+            -X github.com/Anvoria/authly/cmd.Version=${{ steps.version.outputs.version }} \
+            -X github.com/Anvoria/authly/cmd.BuildTime=${{ steps.build_time.outputs.build_time }} \
+            -X github.com/Anvoria/authly/cmd.GitCommit=${{ steps.git_commit.outputs.git_commit }}" \
+            -o bin/authly ./cmd/main.go
+
+      - name: Create release archive
+        run: |
+          mkdir -p release
+          cp bin/authly release/authly
+          tar -czf release/authly-${{ steps.version.outputs.version }}-linux-amd64.tar.gz -C release authly
+          rm -rf release/authly
+
+      - name: Create checksums
+        run: |
+          cd release
+          sha256sum authly-${{ steps.version.outputs.version }}-linux-amd64.tar.gz > authly-${{ steps.version.outputs.version }}-linux-amd64.tar.gz.sha256
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            release/authly-${{ steps.version.outputs.version }}-linux-amd64.tar.gz
+            release/authly-${{ steps.version.outputs.version }}-linux-amd64.tar.gz.sha256
+          name: Release ${{ steps.version.outputs.version }}
+          body: |
+            ## Release ${{ steps.version.outputs.version }}
+            
+            **Build Information:**
+            - Version: ${{ steps.version.outputs.version }}
+            - Build Time: ${{ steps.build_time.outputs.build_time }}
+            - Git Commit: ${{ steps.git_commit.outputs.git_commit }}
+            
+            **Downloads:**
+            - Binary: `authly-${{ steps.version.outputs.version }}-linux-amd64.tar.gz`
+            - Checksum: `authly-${{ steps.version.outputs.version }}-linux-amd64.tar.gz.sha256`
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.version, '-rc') || contains(steps.version.outputs.version, '-beta') || contains(steps.version.outputs.version, '-alpha') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

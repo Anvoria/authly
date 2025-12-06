@@ -36,7 +36,11 @@ func Start(cfg *config.Config) error {
 	}
 
 	addr := cfg.Server.Address()
-	slog.Info("Server starting", "address", addr)
+	slog.Info("Server starting",
+		"address", addr,
+		"app", cfg.App.Name,
+		"version", cfg.App.Version,
+	)
 	if err := app.Listen(addr); err != nil {
 		slog.Error("Failed to start server", "error", err)
 		return err

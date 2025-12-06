@@ -54,6 +54,7 @@ jobs:
           cat > config.ci.yaml << EOF
           app:
             name: "authly"
+            version: "0.2"
           
           server:
             host: "0.0.0.0"
@@ -105,6 +106,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # Fetch all history for tags
 
       - name: Cache Go modules and build cache
         uses: actions/cache@v4
@@ -125,9 +128,50 @@ jobs:
       - name: Install dependencies
         run: go mod download
 
+      - name: Determine version
+        id: version
+        run: |
+          # Try to get version from tag if available, otherwise use dev
+          if [ -n "${{ github.ref }}" ] && [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            TAG_NAME="${{ github.ref_name }}"
+            VERSION="${TAG_NAME#v}"
+          else
+            # Try to get version from latest tag, or use dev
+            LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+            if [ -n "$LATEST_TAG" ]; then
+              VERSION="${LATEST_TAG#v}"
+            else
+              VERSION="dev"
+            fi
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Version: ${VERSION}"
+
+      - name: Get build time
+        id: build_time
+        run: |
+          BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          echo "build_time=${BUILD_TIME}" >> $GITHUB_OUTPUT
+
+      - name: Get git commit
+        id: git_commit
+        run: |
+          GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+          echo "git_commit=${GIT_COMMIT}" >> $GITHUB_OUTPUT
+
       - name: Build
-        run: go build -v ./...
+        run: |
+          go build -ldflags "\
+            -X github.com/Anvoria/authly/cmd.Version=${{ steps.version.outputs.version }} \
+            -X github.com/Anvoria/authly/cmd.BuildTime=${{ steps.build_time.outputs.build_time }} \
+            -X github.com/Anvoria/authly/cmd.GitCommit=${{ steps.git_commit.outputs.git_commit }}" \
+            -v ./...
 
       - name: Build binary
-        run: go build -o bin/authly ./cmd/main.go
+        run: |
+          go build -ldflags "\
+            -X github.com/Anvoria/authly/cmd.Version=${{ steps.version.outputs.version }} \
+            -X github.com/Anvoria/authly/cmd.BuildTime=${{ steps.build_time.outputs.build_time }} \
+            -X github.com/Anvoria/authly/cmd.GitCommit=${{ steps.git_commit.outputs.git_commit }}" \
+            -o bin/authly ./cmd/main.go
 
