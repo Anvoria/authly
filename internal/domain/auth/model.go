@@ -38,6 +38,19 @@ func (c *AccessTokenClaims) Expiration() time.Time {
 	return exp
 }
 
+// GetSid returns the session ID from the token claims
+// It extracts the "sid" claim from the token, with fallback to the stored Sid field
+func (c *AccessTokenClaims) GetSid() string {
+	var sid any
+	if c.Token.Get("sid", &sid) == nil {
+		if s, ok := sid.(string); ok {
+			c.Sid = s
+			return s
+		}
+	}
+	return c.Sid
+}
+
 // Identity represents the identity of a user
 type Identity struct {
 	UserID    string

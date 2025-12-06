@@ -6,8 +6,6 @@ import (
 )
 
 func (ks *KeyStore) Verify(tokenString string) (*AccessTokenClaims, error) {
-	// Verify and parse token using the key set
-	// The library will automatically match the kid from the token header
 	verifiedToken, err := jwt.Parse(
 		[]byte(tokenString),
 		jwt.WithKeySet(ks.KeySet, jws.WithInferAlgorithmFromKey(true)),
@@ -16,9 +14,8 @@ func (ks *KeyStore) Verify(tokenString string) (*AccessTokenClaims, error) {
 		return nil, err
 	}
 
-	// Extract sid claim
 	var sidStr string
-	var sid interface{}
+	var sid any
 	if verifiedToken.Get("sid", &sid) == nil {
 		if s, ok := sid.(string); ok {
 			sidStr = s
