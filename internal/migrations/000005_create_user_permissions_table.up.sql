@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS user_permissions (
     deleted_at TIMESTAMP,
     user_id UUID NOT NULL,
     service_id UUID NOT NULL,
-    bitmask BIGINT NOT NULL DEFAULT 0,
+    bitmask NUMERIC(20) NOT NULL DEFAULT 0,
     permission_v INTEGER NOT NULL DEFAULT 1,
     CONSTRAINT fk_user_permissions_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_user_permissions_service FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE,
