@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 
 	"github.com/goccy/go-yaml"
@@ -83,10 +84,14 @@ func (d *DatabaseConfig) DSN() string {
 
 // URL returns the database connection URL in postgres:// format for golang-migrate
 func (d *DatabaseConfig) URL() string {
+	// URL-encode username and password to handle special characters
+	encodedUser := url.QueryEscape(d.User)
+	encodedPassword := url.QueryEscape(d.Password)
+
 	return fmt.Sprintf(
 		"postgres://%s:%s@%s:%d/%s?sslmode=%s&search_path=public",
-		d.User,
-		d.Password,
+		encodedUser,
+		encodedPassword,
 		d.Host,
 		d.Port,
 		d.DBName,
