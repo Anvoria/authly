@@ -99,9 +99,19 @@ func TestService_Register(t *testing.T) {
 					if err != nil {
 						t.Fatalf("Failed to create existing user for duplicate email test: %v", err)
 					}
-					// Small delay to ensure the database transaction is committed
-					// This helps with race condition detection in CI environments
-					time.Sleep(10 * time.Millisecond)
+					// Verify the user exists before attempting duplicate registration
+					// This ensures the data is committed and visible, preventing race conditions
+					maxRetries := 10
+					for i := range maxRetries {
+						_, err := repo.FindByEmail(tt.req.Email)
+						if err == nil {
+							break
+						}
+						if i == maxRetries-1 {
+							t.Fatalf("Failed to verify existing user was created: %v", err)
+						}
+						time.Sleep(10 * time.Millisecond)
+					}
 				} else if errors.Is(tt.wantErr, ErrUsernameExists) {
 					_, err := service.Register(RegisterRequest{
 						Username:  tt.req.Username,
@@ -113,9 +123,19 @@ func TestService_Register(t *testing.T) {
 					if err != nil {
 						t.Fatalf("Failed to create existing user for duplicate username test: %v", err)
 					}
-					// Small delay to ensure the database transaction is committed
-					// This helps with race condition detection in CI environments
-					time.Sleep(10 * time.Millisecond)
+					// Verify the user exists before attempting duplicate registration
+					// This ensures the data is committed and visible, preventing race conditions
+					maxRetries := 10
+					for i := range maxRetries {
+						_, err := repo.FindByUsername(tt.req.Username)
+						if err == nil {
+							break
+						}
+						if i == maxRetries-1 {
+							t.Fatalf("Failed to verify existing user was created: %v", err)
+						}
+						time.Sleep(10 * time.Millisecond)
+					}
 				}
 			}
 
