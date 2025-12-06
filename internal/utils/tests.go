@@ -7,6 +7,7 @@ import (
 
 	"github.com/Anvoria/authly/internal/config"
 	"gorm.io/driver/postgres"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -57,20 +58,45 @@ func LoadTestConfig(t *testing.T) *config.Config {
 	return cfg
 }
 
-// SetupTestDB creates a PostgreSQL database connection for testing
-// Loads database configuration from config file and auto-migrates provided models
+// SetupTestDB creates a database connection suitable for tests.
+// Defaults to an in-memory SQLite database to avoid external dependencies,
+// but can be switched to Postgres by setting TEST_DB_DRIVER=postgres.
 func SetupTestDB(t *testing.T, models ...any) *gorm.DB {
-	cfg := LoadTestConfig(t)
-	dsn := cfg.Database.DSN()
+	driver := os.Getenv("TEST_DB_DRIVER")
+	if driver == "" {
+		driver = "sqlite"
+	}
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	var (
+		db  *gorm.DB
+		err error
+	)
+
+	switch driver {
+	case "postgres":
+		cfg := LoadTestConfig(t)
+		dsn := cfg.Database.DSN()
+		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	default:
+		db, err = gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{
+			SkipDefaultTransaction: true,
+		})
+	}
+
 	if err != nil {
 		t.Fatalf("Failed to connect to test database: %v", err)
 	}
 
-	// Auto migrate provided models
 	if len(models) > 0 {
-		if err := db.AutoMigrate(models...); err != nil {
+		migrator := db.Migrator()
+		for _, model := range models {
+			if migrator.HasTable(model) {
+				if err := migrator.DropTable(model); err != nil {
+					t.Fatalf("Failed to reset test database schema: %v", err)
+				}
+			}
+		}
+		if err := migrator.AutoMigrate(models...); err != nil {
 			t.Fatalf("Failed to migrate test database: %v", err)
 		}
 	}
