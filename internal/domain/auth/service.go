@@ -35,7 +35,7 @@ type Service struct {
 	issuer            string
 }
 
-// NewService creates a new auth service
+// NewService constructs a Service configured with the provided user repository, session service, permission service, key store, and issuer.
 func NewService(users user.Repository, sessions session.Service, permService permission.ServiceInterface, keyStore *KeyStore, issuer string) *Service {
 	return &Service{
 		Users:             users,
@@ -48,7 +48,9 @@ func NewService(users user.Repository, sessions session.Service, permService per
 
 // BuildAudience builds audience list from scopes
 // Returns list of service codes that user has access to
-// Scopes format: "service" or "service:resource"
+// BuildAudience extracts unique service codes from the given scope keys.
+// Each key is expected in the form "service" or "service:resource"; the returned
+// slice contains each service code at most once in no particular order.
 func BuildAudience(scopes map[string]uint64) []string {
 	audMap := make(map[string]bool)
 	for scopeKey := range scopes {

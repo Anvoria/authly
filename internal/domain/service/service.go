@@ -22,7 +22,7 @@ type serviceImpl struct {
 	repo Repository
 }
 
-// NewService creates a new service service
+// NewService creates a ServiceInterface that uses the provided Repository for persistence.
 func NewService(repo Repository) ServiceInterface {
 	return &serviceImpl{repo}
 }

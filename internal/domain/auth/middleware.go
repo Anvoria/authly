@@ -14,7 +14,7 @@ const (
 	IdentityKey = "identity"
 )
 
-// AuthMiddleware verifies the access token
+// AuthMiddleware returns a Fiber middleware that validates an incoming Bearer access token, ensures its claims match the provided issuer and expected audience, checks revocation via the AuthService, and on success injects an *Identity into the request context under IdentityKey before calling the next handler.
 func AuthMiddleware(keyStore *KeyStore, svc AuthService, issuer string, expectedAudience []string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		authHeader := c.Get("Authorization")
@@ -62,7 +62,8 @@ func AuthMiddleware(keyStore *KeyStore, svc AuthService, issuer string, expected
 	}
 }
 
-// GetIdentity extracts the identity from Fiber context
+// GetIdentity retrieves the *Identity stored in the current Fiber context under IdentityKey.
+// It returns the Identity pointer, or nil if no identity is present or the stored value is not an *Identity.
 func GetIdentity(c *fiber.Ctx) *Identity {
 	identity, ok := c.Locals(IdentityKey).(*Identity)
 	if !ok {
