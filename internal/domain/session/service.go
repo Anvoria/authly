@@ -151,6 +151,10 @@ func (s *service) Exists(id uuid.UUID) (bool, error) {
 		return false, err
 	}
 
+	if sess.Revoked {
+		return false, nil
+	}
+
 	if time.Now().UTC().After(sess.ExpiresAt) {
 		return false, nil
 	}
