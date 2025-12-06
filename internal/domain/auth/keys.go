@@ -115,5 +115,9 @@ func LoadKeys(path, activeKid string) (*KeyStore, error) {
 }
 
 func (ks *KeyStore) GetActiveKey() *SigningKey {
-	return ks.Keys[ks.ActiveKid]
+	activeKid := ks.ActiveKid
+	if !strings.HasPrefix(activeKid, "key-") {
+		activeKid = fmt.Sprintf("key-%s", activeKid)
+	}
+	return ks.Keys[activeKid]
 }

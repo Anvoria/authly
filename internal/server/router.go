@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/Anvoria/authly/internal/config"
@@ -33,7 +34,8 @@ func SetupRoutes(app *fiber.App, envConfig *config.Environment, cfg *config.Conf
 		return fmt.Errorf("active key with KID %s not found in key store", cfg.Auth.ActiveKID)
 	}
 
-	tokenGenerator := auth.NewTokenGenerator(activeKey.PrivateKey, "authly", 15*time.Minute)
+	slog.Info("Active key loaded", "key", cfg.Auth.ActiveKID)
+	tokenGenerator := auth.NewTokenGenerator(activeKey.PrivateKey, cfg.App.Name, 15*time.Minute)
 
 	// Initialize auth service
 	authService := auth.NewService(userRepo, sessionService, tokenGenerator)

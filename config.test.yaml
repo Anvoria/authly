@@ -6,8 +6,8 @@ server:
   port: 8000
 
 auth:
-  keys_path: "/etc/authly/keys"
-  active_kid: "key_id"
+  keys_path: "keys"
+  active_kid: "main"
 
 database:
   host: "localhost"
