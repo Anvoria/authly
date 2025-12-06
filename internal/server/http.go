@@ -22,7 +22,7 @@ func Start(cfg *config.Config) error {
 	}
 	slog.Info("Database connected successfully")
 
-	if err := migrations.RunMigrations(database.DB); err != nil {
+	if err := migrations.RunMigrations(cfg); err != nil {
 		slog.Error("Failed to run migrations", "error", err)
 		return err
 	}

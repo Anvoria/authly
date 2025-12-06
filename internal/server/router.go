@@ -44,7 +44,7 @@ func SetupRoutes(app *fiber.App, envConfig *config.Environment, cfg *config.Conf
 	authGroup := api.Group("/auth")
 	authGroup.Post("/login", authHandler.Login)
 	authGroup.Post("/register", authHandler.Register)
-	
+
 	app.Get("/.well-known/jwks.json", auth.JWKSHandler(keyStore))
 
 	return nil

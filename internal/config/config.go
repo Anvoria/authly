@@ -80,3 +80,16 @@ func (d *DatabaseConfig) DSN() string {
 		d.SSLMode,
 	)
 }
+
+// URL returns the database connection URL in postgres:// format for golang-migrate
+func (d *DatabaseConfig) URL() string {
+	return fmt.Sprintf(
+		"postgres://%s:%s@%s:%d/%s?sslmode=%s&search_path=public",
+		d.User,
+		d.Password,
+		d.Host,
+		d.Port,
+		d.DBName,
+		d.SSLMode,
+	)
+}
