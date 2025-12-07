@@ -131,4 +131,5 @@ type Identity struct {
 	UserID      string
 	SessionID   string
 	PermissionV int
+	Scopes      map[string]uint64
 }

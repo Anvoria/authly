@@ -15,7 +15,7 @@ import (
 )
 
 // SetupRoutes configures HTTP routes, repositories, services, authentication, and middleware on the provided Fiber app.
-// 
+//
 // It mounts the API under "/v1", registers authentication endpoints ("/auth/login", "/auth/register"),
 // exposes the JWKS at "/.well-known/jwks.json", and creates a protected route for "/user/info" that requires authentication.
 // The function also initializes repositories and services required by authentication and permission checks.
