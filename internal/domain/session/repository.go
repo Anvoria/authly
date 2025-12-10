@@ -10,6 +10,7 @@ import (
 type Repository interface {
 	Create(sess *Session) error
 	FindByID(id uuid.UUID) (*Session, error)
+	FindByIDForRevoke(id uuid.UUID) (*Session, error)
 	UpdateHash(id uuid.UUID, oldHash, newHash string, newExpiry time.Time) (bool, error)
 	Revoke(id uuid.UUID) error
 	UpdateLastUsed(id uuid.UUID, t time.Time) error
@@ -30,6 +31,15 @@ func (r *repository) Create(sess *Session) error {
 func (r *repository) FindByID(id uuid.UUID) (*Session, error) {
 	var sess Session
 	err := r.db.Where("id = ? AND revoked = false", id).First(&sess).Error
+	if err != nil {
+		return nil, err
+	}
+	return &sess, nil
+}
+
+func (r *repository) FindByIDForRevoke(id uuid.UUID) (*Session, error) {
+	var sess Session
+	err := r.db.Where("id = ?", id).First(&sess).Error
 	if err != nil {
 		return nil, err
 	}

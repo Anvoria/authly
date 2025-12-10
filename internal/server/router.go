@@ -32,9 +32,10 @@ func SetupRoutes(app *fiber.App, envConfig *config.Environment, cfg *config.Conf
 
 	// Initialize cache
 	serviceCache := cache.NewServiceCache(serviceRepo)
+	tokenRevocationCache := cache.NewTokenRevocationCache()
 
 	// Initialize services
-	sessionService := session.NewService(sessionRepo)
+	sessionService := session.NewServiceWithCache(sessionRepo, tokenRevocationCache)
 	serviceRepoAdapter := perm.NewServiceRepositoryAdapter(serviceRepo)
 	permissionService := perm.NewService(permissionRepo, serviceRepoAdapter)
 	userService := user.NewService(userRepo)
@@ -53,7 +54,7 @@ func SetupRoutes(app *fiber.App, envConfig *config.Environment, cfg *config.Conf
 	slog.Info("Active key loaded", "key", cfg.Auth.ActiveKID, "key_id", keyID)
 
 	// Initialize auth service
-	authService := auth.NewService(userRepo, sessionService, permissionService, keyStore, cfg.App.Name)
+	authService := auth.NewService(userRepo, sessionService, permissionService, keyStore, cfg.App.Name, tokenRevocationCache)
 	authHandler := auth.NewHandler(authService, userService)
 
 	// Setup auth routes
