@@ -15,6 +15,7 @@ type Config struct {
 	Server   ServerConfig   `yaml:"server"`
 	Auth     AuthConfig     `yaml:"auth"`
 	Database DatabaseConfig `yaml:"database"`
+	Redis    RedisConfig    `yaml:"redis"`
 	Logging  LoggingConfig  `yaml:"logging"`
 }
 
@@ -44,6 +45,19 @@ type DatabaseConfig struct {
 	Password string `yaml:"password"`
 	DBName   string `yaml:"dbname"`
 	SSLMode  string `yaml:"sslmode"`
+}
+
+// RedisConfig holds Redis-specific configuration
+type RedisConfig struct {
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	Password string `yaml:"password"`
+	DB       int    `yaml:"db"`
+}
+
+// Address returns the Redis address in the format "host:port"
+func (r *RedisConfig) Address() string {
+	return fmt.Sprintf("%s:%d", r.Host, r.Port)
 }
 
 // LoggingConfig holds logging-specific configuration

@@ -1,10 +1,16 @@
 package service
 
 import (
+	"context"
 	"errors"
 
 	"gorm.io/gorm"
 )
+
+// CacheInvalidator defines interface for cache invalidation
+type CacheInvalidator interface {
+	InvalidateByDomain(ctx context.Context, domain string) error
+}
 
 // ServiceInterface defines the interface for service operations
 type ServiceInterface interface {
@@ -20,12 +26,13 @@ type ServiceInterface interface {
 
 // service implements ServiceInterface
 type serviceImpl struct {
-	repo Repository
+	repo  Repository
+	cache CacheInvalidator
 }
 
-// NewService creates a ServiceInterface that uses the provided Repository for persistence.
-func NewService(repo Repository) ServiceInterface {
-	return &serviceImpl{repo}
+// NewService creates a ServiceInterface with cache invalidation support
+func NewService(repo Repository, cache CacheInvalidator) ServiceInterface {
+	return &serviceImpl{repo: repo, cache: cache}
 }
 
 // Create creates a new service
@@ -123,6 +130,8 @@ func (s *serviceImpl) Update(id string, name, description, domain *string, activ
 		return nil, err
 	}
 
+	oldDomain := svc.Domain
+
 	if name != nil {
 		svc.Name = *name
 	}
@@ -138,6 +147,19 @@ func (s *serviceImpl) Update(id string, name, description, domain *string, activ
 
 	if err := s.repo.Update(svc); err != nil {
 		return nil, err
+	}
+
+	// Invalidate cache if domain changed or if cache is available
+	if s.cache != nil {
+		ctx := context.Background()
+		// Invalidate old domain cache
+		if oldDomain != "" {
+			_ = s.cache.InvalidateByDomain(ctx, oldDomain)
+		}
+		// Invalidate new domain cache
+		if svc.Domain != "" {
+			_ = s.cache.InvalidateByDomain(ctx, svc.Domain)
+		}
 	}
 
 	return svc, nil

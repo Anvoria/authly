@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/Anvoria/authly/internal/cache"
 	"github.com/Anvoria/authly/internal/config"
 	"github.com/Anvoria/authly/internal/database"
 	"github.com/Anvoria/authly/internal/domain/auth"
@@ -28,6 +29,9 @@ func SetupRoutes(app *fiber.App, envConfig *config.Environment, cfg *config.Conf
 	sessionRepo := session.NewRepository(database.DB)
 	serviceRepo := svc.NewRepository(database.DB)
 	permissionRepo := perm.NewRepository(database.DB)
+
+	// Initialize cache
+	serviceCache := cache.NewServiceCache(serviceRepo)
 
 	// Initialize services
 	sessionService := session.NewService(sessionRepo)
@@ -58,7 +62,7 @@ func SetupRoutes(app *fiber.App, envConfig *config.Environment, cfg *config.Conf
 	authGroup.Post("/register", authHandler.Register)
 
 	protectedGroup := api.Group("")
-	authServiceRepoAdapter := auth.NewServiceRepositoryAdapter(serviceRepo)
+	authServiceRepoAdapter := auth.NewServiceRepositoryAdapter(serviceCache)
 	protectedGroup.Use(auth.AuthMiddleware(keyStore, authService, cfg.App.Name, authServiceRepoAdapter))
 	protectedGroup.Get("/user/info", authHandler.GetUserInfo)
 

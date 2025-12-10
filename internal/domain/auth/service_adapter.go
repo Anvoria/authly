@@ -1,6 +1,9 @@
 package auth
 
 import (
+	"context"
+
+	"github.com/Anvoria/authly/internal/cache"
 	svc "github.com/Anvoria/authly/internal/domain/service"
 )
 
@@ -19,17 +22,18 @@ func (a *serviceInfoAdapter) IsActive() bool {
 	return a.service.Active
 }
 
-// NewServiceRepositoryAdapter creates a ServiceRepository adapter from service.Repository
-func NewServiceRepositoryAdapter(repo svc.Repository) ServiceRepository {
-	return &serviceRepositoryAdapter{repo: repo}
+// NewServiceRepositoryAdapter creates a ServiceRepository adapter that uses cache
+func NewServiceRepositoryAdapter(cache *cache.ServiceCache) ServiceRepository {
+	return &serviceRepositoryAdapter{cache: cache}
 }
 
 type serviceRepositoryAdapter struct {
-	repo svc.Repository
+	cache *cache.ServiceCache
 }
 
 func (a *serviceRepositoryAdapter) FindByDomain(domain string) (ServiceInfo, error) {
-	service, err := a.repo.FindByDomain(domain)
+	ctx := context.Background()
+	service, err := a.cache.GetByDomain(ctx, domain)
 	if err != nil {
 		return nil, err
 	}
