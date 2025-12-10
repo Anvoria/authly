@@ -20,6 +20,7 @@ func (h *Handler) CreateService(c *fiber.Ctx) error {
 		Code        string `json:"code"`
 		Name        string `json:"name"`
 		Description string `json:"description"`
+		Domain      string `json:"domain"`
 	}
 
 	if err := c.BodyParser(&req); err != nil {
@@ -33,9 +34,12 @@ func (h *Handler) CreateService(c *fiber.Ctx) error {
 		return utils.ErrorResponse(c, "name is required", fiber.StatusBadRequest)
 	}
 
-	svc, err := h.serviceService.Create(req.Code, req.Name, req.Description)
+	svc, err := h.serviceService.Create(req.Code, req.Name, req.Description, req.Domain)
 	if err != nil {
 		if err == ErrServiceCodeExists {
+			return utils.ErrorResponse(c, err.Error(), fiber.StatusConflict)
+		}
+		if err == ErrServiceDomainExists {
 			return utils.ErrorResponse(c, err.Error(), fiber.StatusConflict)
 		}
 		return utils.ErrorResponse(c, err.Error(), fiber.StatusInternalServerError)
@@ -124,6 +128,7 @@ func (h *Handler) UpdateService(c *fiber.Ctx) error {
 	var req struct {
 		Name        *string `json:"name"`
 		Description *string `json:"description"`
+		Domain      *string `json:"domain"`
 		Active      *bool   `json:"active"`
 	}
 
@@ -131,7 +136,7 @@ func (h *Handler) UpdateService(c *fiber.Ctx) error {
 		return utils.ErrorResponse(c, "invalid_body", fiber.StatusBadRequest)
 	}
 
-	svc, err := h.serviceService.Update(id, req.Name, req.Description, req.Active)
+	svc, err := h.serviceService.Update(id, req.Name, req.Description, req.Domain, req.Active)
 	if err != nil {
 		if err == ErrServiceNotFound {
 			return utils.ErrorResponse(c, err.Error(), fiber.StatusNotFound)

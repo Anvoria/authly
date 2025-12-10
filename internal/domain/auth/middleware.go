@@ -2,6 +2,7 @@ package auth
 
 import (
 	"log/slog"
+	"net/url"
 	"slices"
 	"strings"
 	"time"
@@ -18,10 +19,21 @@ const (
 	ScopesKey = "scopes"
 )
 
+// ServiceRepository defines the interface needed to find services by domain
+type ServiceRepository interface {
+	FindByDomain(domain string) (ServiceInfo, error)
+}
+
+// ServiceInfo provides information about a service needed for AUD verification
+type ServiceInfo interface {
+	GetCode() string
+	IsActive() bool
+}
+
 // AuthMiddleware returns a Fiber middleware that validates an incoming Bearer access token.
-// It checks issuer and optionally validates audience if expectedAudience is provided.
-// For routes like /user/info, pass empty expectedAudience to allow any logged-in user.
-func AuthMiddleware(keyStore *KeyStore, svc AuthService, issuer string, expectedAudience []string) fiber.Handler {
+// It checks issuer, extracts origin from request headers, finds the service by domain,
+// and validates that the token's audience matches the service code.
+func AuthMiddleware(keyStore *KeyStore, svc AuthService, issuer string, serviceRepo ServiceRepository) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		authHeader := c.Get("Authorization")
 		if authHeader == "" {
@@ -58,17 +70,33 @@ func AuthMiddleware(keyStore *KeyStore, svc AuthService, issuer string, expected
 			return utils.ErrorResponse(c, ErrTokenExpiredOrInvalid.Error(), fiber.StatusUnauthorized)
 		}
 
-		if len(expectedAudience) > 0 {
-			aud := claims.Audience()
-			audMatch := false
-			for _, expected := range expectedAudience {
-				if slices.Contains(aud, expected) {
-					audMatch = true
-					break
-				}
+		// Extract origin and verify AUD based on service domain
+		if serviceRepo != nil {
+			origin := extractOrigin(c)
+			if origin == "" {
+				return utils.ErrorResponse(c, ErrInvalidOrigin.Error(), fiber.StatusUnauthorized)
 			}
-			if !audMatch {
-				slog.Error("token audience mismatch", "expected", expectedAudience, "got", aud)
+
+			domain, err := extractDomainFromOrigin(origin)
+			if err != nil {
+				slog.Error("failed to extract domain from origin", "origin", origin, "error", err)
+				return utils.ErrorResponse(c, ErrInvalidOrigin.Error(), fiber.StatusUnauthorized)
+			}
+
+			service, err := serviceRepo.FindByDomain(domain)
+			if err != nil {
+				slog.Error("service not found for domain", "domain", domain, "error", err)
+				return utils.ErrorResponse(c, ErrServiceNotFoundForDomain.Error(), fiber.StatusUnauthorized)
+			}
+
+			if !service.IsActive() {
+				slog.Error("service is not active", "domain", domain)
+				return utils.ErrorResponse(c, ErrServiceNotFoundForDomain.Error(), fiber.StatusUnauthorized)
+			}
+
+			aud := claims.Audience()
+			if !slices.Contains(aud, service.GetCode()) {
+				slog.Error("token audience mismatch", "expected", service.GetCode(), "got", aud)
 				return utils.ErrorResponse(c, ErrTokenExpiredOrInvalid.Error(), fiber.StatusUnauthorized)
 			}
 		}
@@ -97,7 +125,40 @@ func AuthMiddleware(keyStore *KeyStore, svc AuthService, issuer string, expected
 	}
 }
 
-// RequireScope returns a middleware that requires a specific scope (service:resource or service)
+// extractOrigin extracts the origin from the request headers
+// It checks the Origin header first, then falls back to Referer header
+func extractOrigin(c *fiber.Ctx) string {
+	origin := c.Get("Origin")
+	if origin != "" {
+		return origin
+	}
+
+	referer := c.Get("Referer")
+	if referer != "" {
+		return referer
+	}
+
+	return ""
+}
+
+// extractDomainFromOrigin extracts the domain from an origin URL
+func extractDomainFromOrigin(origin string) (string, error) {
+	origin = strings.TrimSuffix(origin, "/")
+
+	parsedURL, err := url.Parse(origin)
+	if err != nil {
+		return "", err
+	}
+
+	domain := parsedURL.Host
+	if idx := strings.Index(domain, ":"); idx != -1 {
+		domain = domain[:idx]
+	}
+
+	return domain, nil
+}
+
+// RequireScope returns a middleware that requires a specific scope
 func RequireScope(requiredScope string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		scopes, ok := c.Locals(ScopesKey).(map[string]uint64)

@@ -9,6 +9,9 @@ var (
 	// ErrServiceCodeExists is returned when trying to create a service with an existing code
 	ErrServiceCodeExists = errors.New("service code already exists")
 
+	// ErrServiceDomainExists is returned when trying to create a service with an existing domain
+	ErrServiceDomainExists = errors.New("service domain already exists")
+
 	// ErrCannotDeleteSystemService is returned when trying to delete a system service
 	ErrCannotDeleteSystemService = errors.New("cannot delete system service")
 

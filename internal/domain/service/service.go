@@ -8,12 +8,13 @@ import (
 
 // ServiceInterface defines the interface for service operations
 type ServiceInterface interface {
-	Create(code, name, description string) (*Service, error)
+	Create(code, name, description, domain string) (*Service, error)
 	FindByID(id string) (*Service, error)
 	FindByCode(code string) (*Service, error)
+	FindByDomain(domain string) (*Service, error)
 	FindAll() ([]*Service, error)
 	FindActive() ([]*Service, error)
-	Update(id string, name, description *string, active *bool) (*Service, error)
+	Update(id string, name, description, domain *string, active *bool) (*Service, error)
 	Delete(id string) error
 }
 
@@ -28,7 +29,7 @@ func NewService(repo Repository) ServiceInterface {
 }
 
 // Create creates a new service
-func (s *serviceImpl) Create(code, name, description string) (*Service, error) {
+func (s *serviceImpl) Create(code, name, description, domain string) (*Service, error) {
 	// Check if code already exists
 	_, err := s.repo.FindByCode(code)
 	if err == nil {
@@ -38,10 +39,22 @@ func (s *serviceImpl) Create(code, name, description string) (*Service, error) {
 		return nil, err
 	}
 
+	// Check if domain already exists
+	if domain != "" {
+		_, err := s.repo.FindByDomain(domain)
+		if err == nil {
+			return nil, ErrServiceDomainExists
+		}
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
+		}
+	}
+
 	svc := &Service{
 		Code:        code,
 		Name:        name,
 		Description: description,
+		Domain:      domain,
 		Active:      true,
 		IsSystem:    false,
 	}
@@ -77,6 +90,18 @@ func (s *serviceImpl) FindByCode(code string) (*Service, error) {
 	return svc, nil
 }
 
+// FindByDomain gets a service by domain
+func (s *serviceImpl) FindByDomain(domain string) (*Service, error) {
+	svc, err := s.repo.FindByDomain(domain)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrServiceNotFound
+		}
+		return nil, err
+	}
+	return svc, nil
+}
+
 // FindAll gets all services
 func (s *serviceImpl) FindAll() ([]*Service, error) {
 	return s.repo.FindAll()
@@ -89,7 +114,7 @@ func (s *serviceImpl) FindActive() ([]*Service, error) {
 
 // Update updates a service
 // Only non-nil fields will be updated
-func (s *serviceImpl) Update(id string, name, description *string, active *bool) (*Service, error) {
+func (s *serviceImpl) Update(id string, name, description, domain *string, active *bool) (*Service, error) {
 	svc, err := s.repo.FindByID(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -103,6 +128,9 @@ func (s *serviceImpl) Update(id string, name, description *string, active *bool)
 	}
 	if description != nil {
 		svc.Description = *description
+	}
+	if domain != nil {
+		svc.Domain = *domain
 	}
 	if active != nil {
 		svc.Active = *active
