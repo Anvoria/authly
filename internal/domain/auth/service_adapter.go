@@ -22,7 +22,8 @@ func (a *serviceInfoAdapter) IsActive() bool {
 	return a.service.Active
 }
 
-// NewServiceRepositoryAdapter creates a ServiceRepository adapter that uses cache
+// NewServiceRepositoryAdapter creates a ServiceRepository backed by the provided ServiceCache.
+// The returned repository adapts services stored in the cache to the package's ServiceRepository interface.
 func NewServiceRepositoryAdapter(cache *cache.ServiceCache) ServiceRepository {
 	return &serviceRepositoryAdapter{cache: cache}
 }

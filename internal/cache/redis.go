@@ -15,7 +15,9 @@ var (
 	RedisClient *redis.Client
 )
 
-// ConnectRedis initializes and connects to Redis using the provided configuration
+// ConnectRedis initializes the package-level RedisClient and verifies connectivity to Redis.
+// It creates a redis.Client from cfg (address, password, DB), performs a Ping using a 5-second timeout, and logs a success message.
+// It returns an error if the initial connectivity test fails.
 func ConnectRedis(cfg *config.RedisConfig) error {
 	RedisClient = redis.NewClient(&redis.Options{
 		Addr:     cfg.Address(),
@@ -35,7 +37,8 @@ func ConnectRedis(cfg *config.RedisConfig) error {
 	return nil
 }
 
-// CloseRedis closes the Redis connection
+// CloseRedis closes the global RedisClient if it is initialized.
+// It returns any error from the underlying Close call and does nothing if RedisClient is nil.
 func CloseRedis() error {
 	if RedisClient != nil {
 		return RedisClient.Close()

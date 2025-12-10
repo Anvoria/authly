@@ -30,7 +30,8 @@ type serviceImpl struct {
 	cache CacheInvalidator
 }
 
-// NewService creates a ServiceInterface with cache invalidation support
+// NewService creates a ServiceInterface that uses the provided repository and optional cache invalidator.
+// If `cache` is nil, cache invalidation is disabled for the returned service.
 func NewService(repo Repository, cache CacheInvalidator) ServiceInterface {
 	return &serviceImpl{repo: repo, cache: cache}
 }

@@ -134,7 +134,8 @@ func HasAny(bitmask uint64, bits ...uint8) bool {
 }
 
 // HasAll reports whether all specified bits are set in the given bitmask.
-// Bits with an index greater than 63 are treated as not set.
+// HasAll reports whether all of the specified bit positions are set in bitmask.
+// If no bits are provided it returns true. Bits with an index greater than 63 are treated as not set.
 func HasAll(bitmask uint64, bits ...uint8) bool {
 	for _, bit := range bits {
 		if !HasBit(bitmask, bit) {

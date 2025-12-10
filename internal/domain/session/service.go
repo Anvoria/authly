@@ -41,12 +41,13 @@ type service struct {
 	revocationCache *cache.TokenRevocationCache
 }
 
-// NewService creates a new session service
+// NewService creates a session Service that uses the provided Repository and does not configure a revocation cache.
 func NewService(repo Repository) Service {
 	return &service{repo: repo}
 }
 
-// NewServiceWithCache creates a new session service with revocation cache support
+// NewServiceWithCache creates a Service configured with the provided repository and an optional token revocation cache.
+// If revocationCache is nil the service will operate without a revocation cache.
 func NewServiceWithCache(repo Repository, revocationCache *cache.TokenRevocationCache) Service {
 	return &service{repo: repo, revocationCache: revocationCache}
 }

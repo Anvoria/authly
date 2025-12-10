@@ -32,7 +32,16 @@ type ServiceInfo interface {
 
 // AuthMiddleware returns a Fiber middleware that validates an incoming Bearer access token.
 // It checks issuer, extracts origin from request headers, finds the service by domain,
-// and validates that the token's audience matches the service code.
+// AuthMiddleware returns a Fiber middleware that authenticates requests using a bearer token
+// from the Authorization header, enforces issuer/expiration/audience rules, checks revocation,
+// and attaches the resolved Identity and scopes to the request context.
+//
+// If a non-empty issuer is provided the middleware validates the token issuer matches it.
+// When a ServiceRepository is supplied the middleware derives the caller domain from the
+// Origin or Referer header, ensures a matching active service exists, and verifies the token's
+// audience contains that service's code. On successful validation the middleware stores the
+// Identity under IdentityKey and the scopes map under ScopesKey in the Fiber context before
+// calling the next handler.
 func AuthMiddleware(keyStore *KeyStore, svc AuthService, issuer string, serviceRepo ServiceRepository) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		authHeader := c.Get("Authorization")
@@ -126,7 +135,7 @@ func AuthMiddleware(keyStore *KeyStore, svc AuthService, issuer string, serviceR
 }
 
 // extractOrigin extracts the origin from the request headers
-// It checks the Origin header first, then falls back to Referer header
+// extractOrigin returns the request origin by checking the "Origin" header and, if absent, the "Referer" header.
 func extractOrigin(c *fiber.Ctx) string {
 	origin := c.Get("Origin")
 	if origin != "" {
@@ -141,7 +150,8 @@ func extractOrigin(c *fiber.Ctx) string {
 	return ""
 }
 
-// extractDomainFromOrigin extracts the domain from an origin URL
+// extractDomainFromOrigin extracts the host domain (without port) from an origin URL string.
+// It trims a trailing slash before parsing and returns an error if the origin is not a valid URL.
 func extractDomainFromOrigin(origin string) (string, error) {
 	origin = strings.TrimSuffix(origin, "/")
 
@@ -158,7 +168,8 @@ func extractDomainFromOrigin(origin string) (string, error) {
 	return domain, nil
 }
 
-// RequireScope returns a middleware that requires a specific scope
+// RequireScope returns a middleware that requires the specified scope to be present and have a non-zero bitmask in the request's scopes stored under ScopesKey.
+// The middleware responds with HTTP 403 Forbidden if scopes are missing, the scope is absent, or its bitmask is zero.
 func RequireScope(requiredScope string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		scopes, ok := c.Locals(ScopesKey).(map[string]uint64)
@@ -175,7 +186,12 @@ func RequireScope(requiredScope string) fiber.Handler {
 	}
 }
 
-// RequirePermission returns a middleware that requires a specific permission bit for a scope
+// RequirePermission returns a middleware that allows the request only when the specified scope contains the given permission bit.
+// 
+// The middleware checks the request's scopes (stored under ScopesKey in the context) and responds with HTTP 403 Forbidden if:
+// - the scopes map is missing or invalid,
+// - the required scope is not present or has a zero bitmask,
+// - the required permission bit is not set in the scope's bitmask.
 func RequirePermission(requiredScope string, requiredBit uint8) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		scopes, ok := c.Locals(ScopesKey).(map[string]uint64)
@@ -197,7 +213,8 @@ func RequirePermission(requiredScope string, requiredBit uint8) fiber.Handler {
 }
 
 // GetIdentity retrieves the *Identity stored in the current Fiber context under IdentityKey.
-// It returns the Identity pointer, or nil if no identity is present or the stored value is not an *Identity.
+// GetIdentity retrieves the Identity stored in the Fiber context under IdentityKey.
+// It returns the *Identity or nil if no identity is present or the stored value is not an *Identity.
 func GetIdentity(c *fiber.Ctx) *Identity {
 	identity, ok := c.Locals(IdentityKey).(*Identity)
 	if !ok {
@@ -206,7 +223,8 @@ func GetIdentity(c *fiber.Ctx) *Identity {
 	return identity
 }
 
-// GetScopes retrieves the scopes map stored in the current Fiber context under ScopesKey.
+// GetScopes returns the scopes map stored in the Fiber context under ScopesKey.
+// If no scopes are present or the stored value has a different type, it returns an empty map.
 func GetScopes(c *fiber.Ctx) map[string]uint64 {
 	scopes, ok := c.Locals(ScopesKey).(map[string]uint64)
 	if !ok {

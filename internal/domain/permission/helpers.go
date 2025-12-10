@@ -43,7 +43,8 @@ func HasAllManagementPermissions(bitmask uint64) bool {
 
 // GetAuthlyScopeKey returns the scope key for authly service
 // GetAuthlyScopeKey constructs the scope key for the authly service for the given resource.
-// If resource is empty, it returns "authly"; otherwise it returns "authly:<resource>".
+// GetAuthlyScopeKey returns the scope key for the authly service for the given resource.
+// If resource is empty the key is "authly"; otherwise the key is "authly:<resource>".
 func GetAuthlyScopeKey(resource string) string {
 	if resource == "" {
 		return "authly"

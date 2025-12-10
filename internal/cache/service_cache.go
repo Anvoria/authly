@@ -27,7 +27,7 @@ type ServiceCache struct {
 	repo service.Repository
 }
 
-// NewServiceCache creates a new ServiceCache instance
+// NewServiceCache creates a ServiceCache that uses the provided repository for backend lookups.
 func NewServiceCache(repo service.Repository) *ServiceCache {
 	return &ServiceCache{repo: repo}
 }
