@@ -1,0 +1,44 @@
+package oidc
+
+import (
+	"time"
+
+	"github.com/Anvoria/authly/internal/database"
+	"github.com/google/uuid"
+)
+
+// AuthorizeRequest represents the OAuth2/OIDC authorization request
+type AuthorizeRequest struct {
+	ResponseType        string `query:"response_type" validate:"required,oneof=code"`
+	ClientID            string `query:"client_id" validate:"required"`
+	RedirectURI         string `query:"redirect_uri" validate:"required,url"`
+	Scope               string `query:"scope" validate:"required"`
+	State               string `query:"state"`
+	CodeChallenge       string `query:"code_challenge"`
+	CodeChallengeMethod string `query:"code_challenge_method" validate:"omitempty,oneof=S256"`
+}
+
+// AuthorizeResponse represents the response from authorization
+type AuthorizeResponse struct {
+	Code  string `json:"code"`
+	State string `json:"state,omitempty"`
+}
+
+// AuthorizationCode represents an OAuth2 authorization code
+type AuthorizationCode struct {
+	database.BaseModel
+
+	Code          string    `gorm:"column:code;type:varchar(255);uniqueIndex;not null"`
+	ClientID      string    `gorm:"column:client_id;type:varchar(255);not null;index"`
+	UserID        uuid.UUID `gorm:"column:user_id;type:uuid;not null;index"`
+	RedirectURI   string    `gorm:"column:redirect_uri;type:text;not null"`
+	Scopes        string    `gorm:"column:scopes;type:text;not null"` // space-separated
+	CodeChallenge string    `gorm:"column:code_challenge;type:varchar(255)"`
+	ChallengeMeth string    `gorm:"column:challenge_meth;type:varchar(10)"`
+	ExpiresAt     time.Time `gorm:"column:expires_at;not null;index"`
+	Used          bool      `gorm:"column:used;default:false;index"`
+}
+
+func (AuthorizationCode) TableName() string {
+	return "authorization_codes"
+}

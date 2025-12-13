@@ -74,7 +74,16 @@ func SetupRoutes(app *fiber.App, envConfig *config.Environment, cfg *config.Conf
 	protectedGroup.Use(auth.AuthMiddleware(keyStore, authService, issuer, authServiceRepoAdapter))
 	protectedGroup.Get("/user/info", authHandler.GetUserInfo)
 
+	// Initialize OIDC repositories and services
+	authCodeRepo := oidc.NewRepository(database.DB)
+	oidcService := oidc.NewService(serviceRepo, authCodeRepo)
+	oidcHandler := oidc.NewHandler(oidcService)
+
+	// Setup OAuth/OIDC routes
+	api.Get("/oauth/authorize", oidcHandler.Authorize)
+
+	// Setup well-known endpoints
 	app.Get("/.well-known/jwks.json", auth.JWKSHandler(keyStore))
-	app.Get("/.well-known/openid-configuration", oicd.OpenIDConfigurationHandler(issuer))
+	app.Get("/.well-known/openid-configuration", oidc.OpenIDConfigurationHandler(issuer))
 	return nil
 }
