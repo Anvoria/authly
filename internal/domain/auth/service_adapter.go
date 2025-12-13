@@ -12,9 +12,9 @@ type serviceInfoAdapter struct {
 	service *svc.Service
 }
 
-// GetCode returns the service code
-func (a *serviceInfoAdapter) GetCode() string {
-	return a.service.Code
+// GetClientID returns the service client_id
+func (a *serviceInfoAdapter) GetClientID() string {
+	return a.service.ClientID
 }
 
 // IsActive returns whether the service is active
@@ -40,8 +40,8 @@ func (a *serviceRepositoryAdapter) FindByDomain(ctx context.Context, domain stri
 	return &serviceInfoAdapter{service: service}, nil
 }
 
-func (a *serviceRepositoryAdapter) FindByCode(ctx context.Context, code string) (ServiceInfo, error) {
-	service, err := a.cache.GetByCode(ctx, code)
+func (a *serviceRepositoryAdapter) FindByClientID(ctx context.Context, clientID string) (ServiceInfo, error) {
+	service, err := a.cache.GetByClientID(ctx, clientID)
 	if err != nil {
 		return nil, err
 	}

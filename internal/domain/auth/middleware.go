@@ -18,15 +18,15 @@ const (
 	ScopesKey = "scopes"
 )
 
-// ServiceRepository defines the interface needed to find services by domain or code
+// ServiceRepository defines the interface needed to find services by domain or client_id
 type ServiceRepository interface {
 	FindByDomain(ctx context.Context, domain string) (ServiceInfo, error)
-	FindByCode(ctx context.Context, code string) (ServiceInfo, error)
+	FindByClientID(ctx context.Context, clientID string) (ServiceInfo, error)
 }
 
 // ServiceInfo provides information about a service needed for AUD verification
 type ServiceInfo interface {
-	GetCode() string
+	GetClientID() string
 	IsActive() bool
 }
 
@@ -35,7 +35,7 @@ type ServiceInfo interface {
 // and attaches the resolved Identity and scopes to the request context.
 //
 // If a non-empty issuer is provided the middleware validates the token issuer matches it.
-// When a ServiceRepository is supplied the middleware validates that each service code in the
+// When a ServiceRepository is supplied the middleware validates that each client_id in the
 // token's audience claim corresponds to a valid, active service. This validation is based
 // solely on the cryptographically signed token claims and does not rely on client-controlled
 // headers like Origin or Referer, which can be spoofed. On successful validation the middleware
@@ -86,15 +86,15 @@ func AuthMiddleware(keyStore *KeyStore, svc AuthService, issuer string, serviceR
 		if serviceRepo != nil {
 			ctx := c.UserContext()
 			validAudience := false
-			for _, serviceCode := range aud {
-				service, err := serviceRepo.FindByCode(ctx, serviceCode)
+			for _, clientID := range aud {
+				service, err := serviceRepo.FindByClientID(ctx, clientID)
 				if err != nil {
-					slog.Debug("service not found for audience code", "code", serviceCode, "error", err)
+					slog.Debug("service not found for audience client_id", "client_id", clientID, "error", err)
 					continue
 				}
 
 				if !service.IsActive() {
-					slog.Debug("service is not active", "code", serviceCode)
+					slog.Debug("service is not active", "client_id", clientID)
 					continue
 				}
 

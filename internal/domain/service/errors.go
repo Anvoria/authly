@@ -6,8 +6,8 @@ var (
 	// ErrServiceNotFound is returned when a service is not found
 	ErrServiceNotFound = errors.New("service not found")
 
-	// ErrServiceCodeExists is returned when trying to create a service with an existing code
-	ErrServiceCodeExists = errors.New("service code already exists")
+	// ErrServiceClientIDExists is returned when trying to create a service with an existing client_id
+	ErrServiceClientIDExists = errors.New("service client_id already exists")
 
 	// ErrServiceDomainExists is returned when trying to create a service with an existing domain
 	ErrServiceDomainExists = errors.New("service domain already exists")

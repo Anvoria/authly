@@ -6,7 +6,7 @@ import "gorm.io/gorm"
 type Repository interface {
 	Create(service *Service) error
 	FindByID(id string) (*Service, error)
-	FindByCode(code string) (*Service, error)
+	FindByClientID(clientID string) (*Service, error)
 	FindByDomain(domain string) (*Service, error)
 	FindAll() ([]*Service, error)
 	FindActive() ([]*Service, error)
@@ -38,10 +38,10 @@ func (r *repository) FindByID(id string) (*Service, error) {
 	return &service, nil
 }
 
-// FindByCode gets a service by code
-func (r *repository) FindByCode(code string) (*Service, error) {
+// FindByClientID gets a service by client_id
+func (r *repository) FindByClientID(clientID string) (*Service, error) {
 	var service Service
-	if err := r.db.Where("code = ?", code).First(&service).Error; err != nil {
+	if err := r.db.Where("client_id = ?", clientID).First(&service).Error; err != nil {
 		return nil, err
 	}
 	return &service, nil
@@ -82,7 +82,7 @@ func (r *repository) Update(service *Service) error {
 	}
 
 	if existing.IsSystem {
-		if service.Code != existing.Code || service.IsSystem != existing.IsSystem {
+		if service.ClientID != existing.ClientID || service.IsSystem != existing.IsSystem {
 			return ErrCannotUpdateSystemService
 		}
 	}
@@ -95,7 +95,7 @@ func (r *repository) Update(service *Service) error {
 	}
 
 	if !existing.IsSystem {
-		updates["code"] = service.Code
+		updates["client_id"] = service.ClientID
 		updates["is_system"] = service.IsSystem
 	}
 

@@ -10,7 +10,7 @@ import (
 
 // ServiceInterface defines the interface for permission operations
 type ServiceInterface interface {
-	// BuildScopes builds a map of service codes (with optional resource) to bitmasks for a user
+	// BuildScopes builds a map of client_ids (with optional resource) to bitmasks for a user
 	BuildScopes(userID string) (map[string]uint64, error)
 
 	// GetUserPermission gets a user's permission bitmask for a service and resource
@@ -42,7 +42,7 @@ type serviceImpl struct {
 	serviceRepo ServiceRepository
 }
 
-// ServiceRepository interface for getting service codes by ID
+// ServiceRepository interface for getting client_ids by ID
 // This should be implemented by domain/service.Repository
 type ServiceRepository interface {
 	FindByID(id string) (*ServiceModel, error)
@@ -50,12 +50,12 @@ type ServiceRepository interface {
 
 // ServiceModel represents a service (to avoid circular dependency)
 type ServiceModel struct {
-	ID   uuid.UUID
-	Code string
+	ID       uuid.UUID
+	ClientID string
 }
 
 // NewService returns a ServiceInterface backed by the provided Repository and ServiceRepository.
-// repo provides data access for user permission records; serviceRepo resolves service metadata such as service codes.
+// repo provides data access for user permission records; serviceRepo resolves service metadata such as client_ids.
 func NewService(repo Repository, serviceRepo ServiceRepository) ServiceInterface {
 	return &serviceImpl{
 		repo:        repo,
@@ -63,7 +63,7 @@ func NewService(repo Repository, serviceRepo ServiceRepository) ServiceInterface
 	}
 }
 
-// BuildScopes builds a map of service codes (with optional resource) to bitmasks for a user
+// BuildScopes builds a map of client_ids (with optional resource) to bitmasks for a user
 func (s *serviceImpl) BuildScopes(userID string) (map[string]uint64, error) {
 	userPerms, err := s.repo.FindUserPermissionsByUserID(userID)
 	if err != nil {
@@ -72,7 +72,7 @@ func (s *serviceImpl) BuildScopes(userID string) (map[string]uint64, error) {
 
 	scopes := make(map[string]uint64)
 	for _, userPerm := range userPerms {
-		// Get service code
+		// Get service client_id
 		service, err := s.serviceRepo.FindByID(userPerm.ServiceID.String())
 		if err != nil {
 			// Skip if service not found (it might have been deleted)
@@ -81,10 +81,10 @@ func (s *serviceImpl) BuildScopes(userID string) (map[string]uint64, error) {
 
 		// Only include if the bitmask is greater than 0
 		if userPerm.Bitmask > 0 {
-			// Build scope key: "service:resource" or "service" if resource is NULL
-			scopeKey := service.Code
+			// Build scope key: "client_id:resource" or "client_id" if resource is NULL
+			scopeKey := service.ClientID
 			if userPerm.Resource != nil && *userPerm.Resource != "" {
-				scopeKey = fmt.Sprintf("%s:%s", service.Code, *userPerm.Resource)
+				scopeKey = fmt.Sprintf("%s:%s", service.ClientID, *userPerm.Resource)
 			}
 			scopes[scopeKey] = userPerm.Bitmask
 		}

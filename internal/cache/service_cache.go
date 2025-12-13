@@ -13,8 +13,8 @@ import (
 const (
 	// ServiceCachePrefix is the prefix for service cache keys
 	ServiceCachePrefix = "service:domain:"
-	// ServiceCacheCodePrefix is the prefix for service cache keys by code
-	ServiceCacheCodePrefix = "service:code:"
+	// ServiceCacheClientIDPrefix is the prefix for service cache keys by client_id
+	ServiceCacheClientIDPrefix = "service:client_id:"
 	// ServiceCacheTTL is the time-to-live for cached service data
 	ServiceCacheTTL = 1 * time.Hour
 )
@@ -36,8 +36,8 @@ func NewServiceCache(repo service.Repository) *ServiceCache {
 
 // cachedServiceInfo represents cached service information
 type cachedServiceInfo struct {
-	Code   string `json:"code"`
-	Active bool   `json:"active"`
+	ClientID string `json:"client_id"`
+	Active   bool   `json:"active"`
 }
 
 // GetByDomain retrieves a service by domain, using cache if available
@@ -55,8 +55,8 @@ func (c *ServiceCache) GetByDomain(ctx context.Context, domain string) (*service
 		if err := json.Unmarshal([]byte(cached), &info); err == nil {
 			slog.Debug("Service cache hit from Redis", "domain", domain, "key", cacheKey)
 			return &service.Service{
-				Code:   info.Code,
-				Active: info.Active,
+				ClientID: info.ClientID,
+				Active:   info.Active,
 			}, nil
 		}
 	}
@@ -69,8 +69,8 @@ func (c *ServiceCache) GetByDomain(ctx context.Context, domain string) (*service
 	}
 
 	info := cachedServiceInfo{
-		Code:   svc.Code,
-		Active: svc.Active,
+		ClientID: svc.ClientID,
+		Active:   svc.Active,
 	}
 	data, err := json.Marshal(info)
 	if err == nil {
@@ -84,9 +84,9 @@ func (c *ServiceCache) GetByDomain(ctx context.Context, domain string) (*service
 	return svc, nil
 }
 
-// GetByCode retrieves a service by code, using cache if available
-func (c *ServiceCache) GetByCode(ctx context.Context, code string) (*service.Service, error) {
-	cacheKey := ServiceCacheCodePrefix + code
+// GetByClientID retrieves a service by client_id, using cache if available
+func (c *ServiceCache) GetByClientID(ctx context.Context, clientID string) (*service.Service, error) {
+	cacheKey := ServiceCacheClientIDPrefix + clientID
 
 	if RedisClient == nil {
 		return nil, fmt.Errorf("redis client not initialized")
@@ -97,31 +97,31 @@ func (c *ServiceCache) GetByCode(ctx context.Context, code string) (*service.Ser
 	if err == nil {
 		var info cachedServiceInfo
 		if err := json.Unmarshal([]byte(cached), &info); err == nil {
-			slog.Debug("Service cache hit from Redis", "code", code, "key", cacheKey)
+			slog.Debug("Service cache hit from Redis", "client_id", clientID, "key", cacheKey)
 			return &service.Service{
-				Code:   info.Code,
-				Active: info.Active,
+				ClientID: info.ClientID,
+				Active:   info.Active,
 			}, nil
 		}
 	}
 
-	slog.Debug("Service cache miss, fetching from database", "code", code)
+	slog.Debug("Service cache miss, fetching from database", "client_id", clientID)
 
-	svc, err := c.repo.FindByCode(code)
+	svc, err := c.repo.FindByClientID(clientID)
 	if err != nil {
 		return nil, err
 	}
 
 	info := cachedServiceInfo{
-		Code:   svc.Code,
-		Active: svc.Active,
+		ClientID: svc.ClientID,
+		Active:   svc.Active,
 	}
 	data, err := json.Marshal(info)
 	if err == nil {
 		if err := RedisClient.Set(ctx, cacheKey, data, ServiceCacheTTL).Err(); err != nil {
-			slog.Warn("Failed to store service in Redis cache", "code", code, "error", err)
+			slog.Warn("Failed to store service in Redis cache", "client_id", clientID, "error", err)
 		} else {
-			slog.Debug("Service cached in Redis", "code", code, "key", cacheKey, "ttl", ServiceCacheTTL)
+			slog.Debug("Service cached in Redis", "client_id", clientID, "key", cacheKey, "ttl", ServiceCacheTTL)
 		}
 	}
 

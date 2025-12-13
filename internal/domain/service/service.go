@@ -2,8 +2,11 @@ package service
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
+	"fmt"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -14,9 +17,9 @@ type CacheInvalidator interface {
 
 // ServiceInterface defines the interface for service operations
 type ServiceInterface interface {
-	Create(code, name, description, domain string) (*Service, error)
+	Create(slug, name, description, domain string, redirectURIs []string, allowedScopes []string) (*Service, error)
 	FindByID(id string) (*Service, error)
-	FindByCode(code string) (*Service, error)
+	FindByClientID(clientID string) (*Service, error)
 	FindByDomain(domain string) (*Service, error)
 	FindAll() ([]*Service, error)
 	FindActive() ([]*Service, error)
@@ -37,11 +40,13 @@ func NewService(repo Repository, cache CacheInvalidator) ServiceInterface {
 }
 
 // Create creates a new service
-func (s *serviceImpl) Create(code, name, description, domain string) (*Service, error) {
-	// Check if code already exists
-	_, err := s.repo.FindByCode(code)
+func (s *serviceImpl) Create(slug, name, description, domain string, redirectURIs []string, allowedScopes []string) (*Service, error) {
+	clientID := GenerateClientID(slug)
+
+	// Check if client_id already exists
+	_, err := s.repo.FindByClientID(clientID)
 	if err == nil {
-		return nil, ErrServiceCodeExists
+		return nil, ErrServiceClientIDExists
 	}
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
@@ -59,12 +64,15 @@ func (s *serviceImpl) Create(code, name, description, domain string) (*Service, 
 	}
 
 	svc := &Service{
-		Code:        code,
-		Name:        name,
-		Description: description,
-		Domain:      domain,
-		Active:      true,
-		IsSystem:    false,
+		ClientID:      clientID,
+		ClientSecret:  GenerateClientSecret(),
+		RedirectURIs:  redirectURIs,
+		AllowedScopes: allowedScopes,
+		Name:          name,
+		Description:   description,
+		Domain:        domain,
+		Active:        true,
+		IsSystem:      false,
 	}
 
 	if err := s.repo.Create(svc); err != nil {
@@ -86,9 +94,9 @@ func (s *serviceImpl) FindByID(id string) (*Service, error) {
 	return svc, nil
 }
 
-// FindByCode gets a service by code
-func (s *serviceImpl) FindByCode(code string) (*Service, error) {
-	svc, err := s.repo.FindByCode(code)
+// FindByClientID gets a service by client_id
+func (s *serviceImpl) FindByClientID(clientID string) (*Service, error) {
+	svc, err := s.repo.FindByClientID(clientID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrServiceNotFound
@@ -169,4 +177,12 @@ func (s *serviceImpl) Update(id string, name, description, domain *string, activ
 // Delete deletes a service
 func (s *serviceImpl) Delete(id string) error {
 	return s.repo.Delete(id)
+}
+
+func GenerateClientID(slug string) string {
+	return fmt.Sprintf("authly_%s_%s", slug, uuid.New().String()[:8])
+}
+
+func GenerateClientSecret() string {
+	return base64.RawStdEncoding.EncodeToString([]byte(uuid.New().String()))[:32]
 }

@@ -20,7 +20,7 @@ func (a *serviceRepositoryAdapter) FindByID(id string) (*ServiceModel, error) {
 		return nil, err
 	}
 	return &ServiceModel{
-		ID:   svc.ID,
-		Code: svc.Code,
+		ID:       svc.ID,
+		ClientID: svc.ClientID,
 	}, nil
 }

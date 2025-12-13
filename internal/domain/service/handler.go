@@ -17,26 +17,28 @@ func NewHandler(s ServiceInterface) *Handler {
 // CreateService handles the creation of a new service
 func (h *Handler) CreateService(c *fiber.Ctx) error {
 	var req struct {
-		Code        string `json:"code"`
-		Name        string `json:"name"`
-		Description string `json:"description"`
-		Domain      string `json:"domain"`
+		Slug          string   `json:"slug"`
+		Name          string   `json:"name"`
+		Description   string   `json:"description"`
+		Domain        string   `json:"domain"`
+		RedirectURIs  []string `json:"redirect_uris"`
+		AllowedScopes []string `json:"allowed_scopes"`
 	}
 
 	if err := c.BodyParser(&req); err != nil {
 		return utils.ErrorResponse(c, "invalid_body", fiber.StatusBadRequest)
 	}
 
-	if req.Code == "" {
-		return utils.ErrorResponse(c, "code is required", fiber.StatusBadRequest)
+	if req.Slug == "" {
+		return utils.ErrorResponse(c, "slug is required", fiber.StatusBadRequest)
 	}
 	if req.Name == "" {
 		return utils.ErrorResponse(c, "name is required", fiber.StatusBadRequest)
 	}
 
-	svc, err := h.serviceService.Create(req.Code, req.Name, req.Description, req.Domain)
+	svc, err := h.serviceService.Create(req.Slug, req.Name, req.Description, req.Domain, req.RedirectURIs, req.AllowedScopes)
 	if err != nil {
-		if err == ErrServiceCodeExists {
+		if err == ErrServiceClientIDExists {
 			return utils.ErrorResponse(c, err.Error(), fiber.StatusConflict)
 		}
 		if err == ErrServiceDomainExists {
@@ -70,14 +72,14 @@ func (h *Handler) GetService(c *fiber.Ctx) error {
 	}, "Service retrieved successfully")
 }
 
-// GetServiceByCode handles the retrieval of a service by code
-func (h *Handler) GetServiceByCode(c *fiber.Ctx) error {
-	code := c.Params("code")
-	if code == "" {
-		return utils.ErrorResponse(c, "code is required", fiber.StatusBadRequest)
+// GetServiceByClientID handles the retrieval of a service by client_id
+func (h *Handler) GetServiceByClientID(c *fiber.Ctx) error {
+	clientID := c.Params("client_id")
+	if clientID == "" {
+		return utils.ErrorResponse(c, "client_id is required", fiber.StatusBadRequest)
 	}
 
-	svc, err := h.serviceService.FindByCode(code)
+	svc, err := h.serviceService.FindByClientID(clientID)
 	if err != nil {
 		if err == ErrServiceNotFound {
 			return utils.ErrorResponse(c, err.Error(), fiber.StatusNotFound)

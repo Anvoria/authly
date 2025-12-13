@@ -52,30 +52,30 @@ func NewService(users user.Repository, sessions session.Service, permService per
 }
 
 // BuildAudience builds audience list from scopes
-// Returns list of service codes that user has access to
-// BuildAudience extracts unique service codes from the given scope keys.
-// Each key is expected in the form "service" or "service:resource"; the returned
-// slice contains each service code at most once in no particular order.
+// Returns list of client_ids that user has access to
+// BuildAudience extracts unique client_ids from the given scope keys.
+// Each key is expected in the form "client_id" or "client_id:resource"; the returned
+// slice contains each client_id at most once in no particular order.
 func BuildAudience(scopes map[string]uint64) []string {
 	audMap := make(map[string]bool)
 	for scopeKey := range scopes {
-		// Extract service code from scope key (format: "service" or "service:resource")
-		serviceCode := scopeKey
-		// Find first colon to extract service code
+		// Extract client_id from scope key (format: "client_id" or "client_id:resource")
+		clientID := scopeKey
+		// Find first colon to extract client_id
 		for i := 0; i < len(scopeKey); i++ {
 			if scopeKey[i] == ':' {
-				serviceCode = scopeKey[:i]
+				clientID = scopeKey[:i]
 				break
 			}
 		}
-		if serviceCode != "" {
-			audMap[serviceCode] = true
+		if clientID != "" {
+			audMap[clientID] = true
 		}
 	}
 
 	aud := make([]string, 0, len(audMap))
-	for serviceCode := range audMap {
-		aud = append(aud, serviceCode)
+	for clientID := range audMap {
+		aud = append(aud, clientID)
 	}
 	return aud
 }
@@ -158,6 +158,14 @@ func (s *Service) Register(req user.RegisterRequest) (*user.UserResponse, error)
 		if _, err := s.Users.FindByEmail(req.Email); err == nil {
 			return nil, user.ErrEmailExists
 		}
+	}
+
+	if req.Username == "" {
+		return nil, user.ErrUsernameRequired
+	}
+
+	if req.Password == "" {
+		return nil, user.ErrPasswordRequired
 	}
 
 	if _, err := s.Users.FindByUsername(req.Username); err == nil {
