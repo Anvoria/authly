@@ -161,6 +161,11 @@ func RequirePermission(requiredScope string, requiredBit uint8) fiber.Handler {
 			return utils.ErrorResponse(c, ErrUnauthorized.Error(), fiber.StatusForbidden)
 		}
 
+		if requiredBit >= 64 {
+			slog.Error("invalid bit position: must be 0-63", "bit", requiredBit)
+			return utils.ErrorResponse(c, ErrTokenValidationError.Error(), fiber.StatusForbidden)
+		}
+
 		bitmask, exists := scopes[requiredScope]
 		if !exists || bitmask == 0 {
 			return utils.ErrorResponse(c, ErrUnauthorized.Error(), fiber.StatusForbidden)
