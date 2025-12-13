@@ -19,7 +19,7 @@ var (
 // It creates a redis.Client from cfg (address, password, DB), performs a Ping using a 5-second timeout, and logs a success message.
 // It returns an error if the initial connectivity test fails.
 func ConnectRedis(cfg *config.RedisConfig) error {
-	RedisClient = redis.NewClient(&redis.Options{
+	localClient := redis.NewClient(&redis.Options{
 		Addr:     cfg.Address(),
 		Password: cfg.Password,
 		DB:       cfg.DB,
@@ -29,9 +29,12 @@ func ConnectRedis(cfg *config.RedisConfig) error {
 	defer cancel()
 
 	// Test connection
-	if err := RedisClient.Ping(ctx).Err(); err != nil {
+	if err := localClient.Ping(ctx).Err(); err != nil {
+		localClient.Close() // Close the local client to avoid leaking connections
 		return fmt.Errorf("failed to connect to Redis: %w", err)
 	}
+
+	RedisClient = localClient
 
 	slog.Info("Redis connected successfully", "address", cfg.Address())
 	return nil
