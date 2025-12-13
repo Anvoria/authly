@@ -8,7 +8,7 @@ import (
 	"github.com/Anvoria/authly/internal/config"
 	"github.com/Anvoria/authly/internal/database"
 	"github.com/Anvoria/authly/internal/domain/auth"
-	"github.com/Anvoria/authly/internal/domain/oicd"
+	"github.com/Anvoria/authly/internal/domain/oidc"
 	perm "github.com/Anvoria/authly/internal/domain/permission"
 	svc "github.com/Anvoria/authly/internal/domain/service"
 	"github.com/Anvoria/authly/internal/domain/session"
