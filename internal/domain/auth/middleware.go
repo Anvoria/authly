@@ -83,7 +83,7 @@ func AuthMiddleware(keyStore *KeyStore, svc AuthService, issuer string, serviceR
 		if serviceRepo != nil {
 			origin := extractOrigin(c)
 			if origin == "" {
-				return utils.ErrorResponse(c, ErrInvalidOrigin.Error(), fiber.StatusUnauthorized)
+				return c.Next() // skip aud verification
 			}
 
 			domain, err := extractDomainFromOrigin(origin)
@@ -187,7 +187,7 @@ func RequireScope(requiredScope string) fiber.Handler {
 }
 
 // RequirePermission returns a middleware that allows the request only when the specified scope contains the given permission bit.
-// 
+//
 // The middleware checks the request's scopes (stored under ScopesKey in the context) and responds with HTTP 403 Forbidden if:
 // - the scopes map is missing or invalid,
 // - the required scope is not present or has a zero bitmask,
