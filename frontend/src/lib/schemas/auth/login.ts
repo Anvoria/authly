@@ -42,12 +42,21 @@ export type LoginRequest = z.infer<typeof loginRequestSchema>;
  */
 export const loginSuccessResponseSchema = z.object({
     success: z.literal(true),
-    data: z
-        .object({
-            user_id: z.string().optional(),
-        })
-        .loose(),
-    message: z.string().optional(),
+    data: z.object({
+        user: z
+            .object({
+                id: z.string(),
+                username: z.string(),
+                first_name: z.string(),
+                last_name: z.string(),
+                email: z.string().nullable(),
+                is_active: z.boolean(),
+                created_at: z.string(),
+                updated_at: z.string(),
+            })
+            .loose(),
+    }),
+    message: z.string(),
 });
 
 /**
