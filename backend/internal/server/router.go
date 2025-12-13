@@ -72,7 +72,7 @@ func SetupRoutes(app *fiber.App, envConfig *config.Environment, cfg *config.Conf
 	protectedGroup := api.Group("")
 	authServiceRepoAdapter := auth.NewServiceRepositoryAdapter(serviceCache)
 	protectedGroup.Use(auth.AuthMiddleware(keyStore, authService, issuer, authServiceRepoAdapter))
-	protectedGroup.Get("/user/info", authHandler.GetUserInfo)
+	protectedGroup.Get("/userinfo", authHandler.GetUserInfo)
 
 	// Initialize OIDC repositories and services
 	authCodeRepo := oidc.NewRepository(database.DB)
