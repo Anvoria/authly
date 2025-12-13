@@ -8,6 +8,7 @@ import (
 	"github.com/Anvoria/authly/internal/config"
 	"github.com/Anvoria/authly/internal/database"
 	"github.com/Anvoria/authly/internal/domain/auth"
+	"github.com/Anvoria/authly/internal/domain/oicd"
 	perm "github.com/Anvoria/authly/internal/domain/permission"
 	svc "github.com/Anvoria/authly/internal/domain/service"
 	"github.com/Anvoria/authly/internal/domain/session"
@@ -72,6 +73,6 @@ func SetupRoutes(app *fiber.App, envConfig *config.Environment, cfg *config.Conf
 	protectedGroup.Get("/user/info", authHandler.GetUserInfo)
 
 	app.Get("/.well-known/jwks.json", auth.JWKSHandler(keyStore))
-
+	app.Get("/.well-known/openid-configuration", oicd.OpenIDConfigurationHandler())
 	return nil
 }
