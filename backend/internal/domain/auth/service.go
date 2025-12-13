@@ -85,8 +85,7 @@ func (s *Service) GenerateAccessToken(sub, sid string, scopes map[string]uint64,
 	exp := now.Add(15 * time.Minute)
 
 	// Build audience from scopes
-	// aud := BuildAudience(scopes)
-	aud := []string{"authly_authly_00000000"}
+	aud := BuildAudience(scopes)
 
 	// Build token
 	token, err := jwt.NewBuilder().

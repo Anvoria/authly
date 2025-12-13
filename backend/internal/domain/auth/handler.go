@@ -38,18 +38,17 @@ func (h *Handler) Login(c *fiber.Ctx) error {
 	}
 
 	c.Cookie(&fiber.Cookie{
-		Name:     "refresh_token",
+		Name:     "session",
 		Value:    fmt.Sprintf("%s:%s", res.RefreshSID, res.RefreshToken),
 		HTTPOnly: true,
 		Secure:   true,
 		Path:     "/",
-		SameSite: "None",
+		SameSite: "Lax",
 		Expires:  time.Now().Add(30 * 24 * time.Hour),
 	})
 
 	return utils.SuccessResponse(c, fiber.Map{
-		"access_token": res.AccessToken,
-		"user":         res.User,
+		"user": res.User,
 	}, "Login successful")
 }
 
