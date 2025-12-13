@@ -1,0 +1,2 @@
+ALTER TABLE services ADD COLUMN IF NOT EXISTS domain VARCHAR(255);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_services_domain ON services(domain) WHERE domain IS NOT NULL;

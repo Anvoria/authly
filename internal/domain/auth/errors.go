@@ -184,6 +184,12 @@ var (
 
 	// ErrUnauthorized is returned when the user is not authorized
 	ErrUnauthorized = errors.New("unauthorized")
+
+	// ErrInvalidOrigin is returned when the origin header is missing or invalid
+	ErrInvalidOrigin = errors.New("invalid origin")
+
+	// ErrServiceNotFoundForDomain is returned when no service is found for the given domain
+	ErrServiceNotFoundForDomain = errors.New("service not found for domain")
 )
 
 // Handler errors

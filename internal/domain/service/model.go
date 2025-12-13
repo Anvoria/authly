@@ -19,6 +19,7 @@ type Service struct {
 	Code        string `gorm:"column:code;unique;not null;size:50"`
 	Name        string `gorm:"column:name;not null;size:255"`
 	Description string `gorm:"column:description;type:text"`
+	Domain      string `gorm:"column:domain;unique;size:255"`
 	Active      bool   `gorm:"column:active;default:true"`
 	IsSystem    bool   `gorm:"column:is_system;default:false"`
 }
@@ -35,6 +36,7 @@ type ServiceResponse struct {
 	Code        string    `json:"code"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
+	Domain      string    `json:"domain"`
 	Active      bool      `json:"active"`
 	IsSystem    bool      `json:"is_system"`
 }
@@ -48,6 +50,7 @@ func (s *Service) ToResponse() *ServiceResponse {
 		Code:        s.Code,
 		Name:        s.Name,
 		Description: s.Description,
+		Domain:      s.Domain,
 		Active:      s.Active,
 		IsSystem:    s.IsSystem,
 	}

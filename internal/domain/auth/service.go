@@ -1,10 +1,12 @@
 package auth
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"time"
 
+	"github.com/Anvoria/authly/internal/cache"
 	"github.com/Anvoria/authly/internal/domain/permission"
 	"github.com/Anvoria/authly/internal/domain/session"
 	"github.com/Anvoria/authly/internal/domain/user"
@@ -34,16 +36,18 @@ type Service struct {
 	PermissionService permission.ServiceInterface
 	KeyStore          *KeyStore
 	issuer            string
+	revocationCache   *cache.TokenRevocationCache
 }
 
-// NewService constructs a Service configured with the provided user repository, session service, permission service, key store, and issuer.
-func NewService(users user.Repository, sessions session.Service, permService permission.ServiceInterface, keyStore *KeyStore, issuer string) *Service {
+// NewService constructs a Service configured with the provided user repository, session service, permission service, key store, issuer, and revocation cache.
+func NewService(users user.Repository, sessions session.Service, permService permission.ServiceInterface, keyStore *KeyStore, issuer string, revocationCache *cache.TokenRevocationCache) *Service {
 	return &Service{
 		Users:             users,
 		Sessions:          sessions,
 		PermissionService: permService,
 		KeyStore:          keyStore,
 		issuer:            issuer,
+		revocationCache:   revocationCache,
 	}
 }
 
@@ -181,11 +185,25 @@ func (s *Service) Register(req user.RegisterRequest) (*user.UserResponse, error)
 	return newUser.ToResponse(), nil
 }
 
-// IsTokenRevoked checks if a token has been revoked
-// This is a stub implementation - in production, this should check Redis/cache
-// for revoked tokens (e.g., by jti claim or user:last_logout_at)
+// IsTokenRevoked checks if a token has been revoked by checking Redis cache
+// It uses the session ID (sid) from the token claims to check if the session is revoked
 func (s *Service) IsTokenRevoked(claims *AccessTokenClaims) (bool, error) {
-	// TODO: Implement Redis-based revocation check https://github.com/Anvoria/authly/issues/9
-	slog.Warn("IsTokenRevoked is not implemented")
-	return false, nil
+	if s.revocationCache == nil {
+		slog.Warn("Token revocation cache not available, skipping revocation check")
+		return false, nil
+	}
+
+	sessionID := claims.GetSid()
+	if sessionID == "" {
+		return false, nil
+	}
+
+	ctx := context.Background()
+	revoked, err := s.revocationCache.IsSessionRevoked(ctx, sessionID)
+	if err != nil {
+		slog.Warn("Failed to check token revocation in Redis", "error", err, "session_id", sessionID)
+		return false, nil
+	}
+
+	return revoked, nil
 }

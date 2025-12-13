@@ -21,3 +21,9 @@ database:
 logging:
   level: "info"
 
+redis:
+  host: "localhost"
+  port: 6379
+  password: ""
+  db: 0
+

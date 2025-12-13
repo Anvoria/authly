@@ -1,13 +1,16 @@
 package session
 
 import (
+	"context"
 	"errors"
+	"log/slog"
 	"time"
 
 	"crypto/rand"
 	"crypto/sha3"
 	"encoding/base64"
 
+	"github.com/Anvoria/authly/internal/cache"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -34,12 +37,19 @@ type Service interface {
 
 // service struct for session operations
 type service struct {
-	repo Repository
+	repo            Repository
+	revocationCache *cache.TokenRevocationCache
 }
 
-// NewService creates a new session service
+// NewService creates a session Service that uses the provided Repository and does not configure a revocation cache.
 func NewService(repo Repository) Service {
-	return &service{repo}
+	return &service{repo: repo}
+}
+
+// NewServiceWithCache creates a Service configured with the provided repository and an optional token revocation cache.
+// If revocationCache is nil the service will operate without a revocation cache.
+func NewServiceWithCache(repo Repository, revocationCache *cache.TokenRevocationCache) Service {
+	return &service{repo: repo, revocationCache: revocationCache}
 }
 
 // generateSecret generates a random secret for the session
@@ -138,7 +148,35 @@ func (s *service) Rotate(id uuid.UUID, oldSecret string, ttl time.Duration) (str
 
 // Revoke revokes a session
 func (s *service) Revoke(id uuid.UUID) error {
-	return s.repo.Revoke(id)
+	// Get session info before revoking to get ExpiresAt for Redis TTL
+	sess, err := s.repo.FindByIDForRevoke(id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrInvalidSession
+		}
+		return err
+	}
+
+	// Revoke in database
+	if err := s.repo.Revoke(id); err != nil {
+		return err
+	}
+
+	// Store revocation in Redis cache if available
+	if s.revocationCache != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		// Calculate TTL: time until session expires (or minimum 1 hour if already expired)
+		ttl := time.Until(sess.ExpiresAt)
+		if ttl <= 0 {
+			ttl = 1 * time.Hour
+		}
+		if err := s.revocationCache.RevokeSession(ctx, id.String(), ttl); err != nil {
+			slog.Warn("Failed to store session revocation in Redis", "error", err, "session_id", id.String())
+		}
+	}
+
+	return nil
 }
 
 // Exists checks if a session exists and is valid (not revoked, not expired)

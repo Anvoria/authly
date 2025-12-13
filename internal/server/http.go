@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/Anvoria/authly/internal/cache"
 	"github.com/Anvoria/authly/internal/config"
 	"github.com/Anvoria/authly/internal/database"
 	"github.com/Anvoria/authly/internal/migrations"
@@ -21,6 +22,11 @@ func Start(cfg *config.Config) error {
 		return err
 	}
 	slog.Info("Database connected successfully")
+
+	if err := cache.ConnectRedis(&cfg.Redis); err != nil {
+		slog.Error("Failed to connect to Redis", "error", err)
+		return err
+	}
 
 	if err := migrations.RunMigrations(cfg); err != nil {
 		slog.Error("Failed to run migrations", "error", err)

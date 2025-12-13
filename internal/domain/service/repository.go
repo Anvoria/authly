@@ -7,6 +7,7 @@ type Repository interface {
 	Create(service *Service) error
 	FindByID(id string) (*Service, error)
 	FindByCode(code string) (*Service, error)
+	FindByDomain(domain string) (*Service, error)
 	FindAll() ([]*Service, error)
 	FindActive() ([]*Service, error)
 	Update(service *Service) error
@@ -46,6 +47,15 @@ func (r *repository) FindByCode(code string) (*Service, error) {
 	return &service, nil
 }
 
+// FindByDomain gets a service by domain
+func (r *repository) FindByDomain(domain string) (*Service, error) {
+	var service Service
+	if err := r.db.Where("domain = ?", domain).First(&service).Error; err != nil {
+		return nil, err
+	}
+	return &service, nil
+}
+
 // FindAll gets all services
 func (r *repository) FindAll() ([]*Service, error) {
 	var services []*Service
@@ -80,6 +90,7 @@ func (r *repository) Update(service *Service) error {
 	updates := map[string]any{
 		"name":        service.Name,
 		"description": service.Description,
+		"domain":      service.Domain,
 		"active":      service.Active,
 	}
 

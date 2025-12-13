@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/Anvoria/authly/internal/cache"
 	"github.com/Anvoria/authly/internal/config"
 	"github.com/Anvoria/authly/internal/database"
 	"github.com/Anvoria/authly/internal/domain/auth"
@@ -15,11 +16,15 @@ import (
 )
 
 // SetupRoutes configures HTTP routes, repositories, services, authentication, and middleware on the provided Fiber app.
-// 
+//
 // It mounts the API under "/v1", registers authentication endpoints ("/auth/login", "/auth/register"),
 // exposes the JWKS at "/.well-known/jwks.json", and creates a protected route for "/user/info" that requires authentication.
 // The function also initializes repositories and services required by authentication and permission checks.
-// Returns an error if cryptographic keys cannot be loaded or the configured active key is not found.
+// SetupRoutes configures HTTP routes, repositories, caches, services, authentication and middleware on the provided Fiber app.
+// It mounts the API under "/v1", registers authentication endpoints under "/v1/auth" (POST /login, POST /register),
+// exposes the JWKS at "/.well-known/jwks.json", and protects GET "/v1/user/info" with authentication middleware.
+// The function loads cryptographic keys from cfg.Auth.KeysPath and requires the configured active KID to be present;
+// it returns an error if keys cannot be loaded or the active key is not found.
 func SetupRoutes(app *fiber.App, envConfig *config.Environment, cfg *config.Config) error {
 	api := app.Group("/v1")
 
@@ -29,8 +34,12 @@ func SetupRoutes(app *fiber.App, envConfig *config.Environment, cfg *config.Conf
 	serviceRepo := svc.NewRepository(database.DB)
 	permissionRepo := perm.NewRepository(database.DB)
 
+	// Initialize cache
+	serviceCache := cache.NewServiceCache(serviceRepo)
+	tokenRevocationCache := cache.NewTokenRevocationCache()
+
 	// Initialize services
-	sessionService := session.NewService(sessionRepo)
+	sessionService := session.NewServiceWithCache(sessionRepo, tokenRevocationCache)
 	serviceRepoAdapter := perm.NewServiceRepositoryAdapter(serviceRepo)
 	permissionService := perm.NewService(permissionRepo, serviceRepoAdapter)
 	userService := user.NewService(userRepo)
@@ -49,7 +58,7 @@ func SetupRoutes(app *fiber.App, envConfig *config.Environment, cfg *config.Conf
 	slog.Info("Active key loaded", "key", cfg.Auth.ActiveKID, "key_id", keyID)
 
 	// Initialize auth service
-	authService := auth.NewService(userRepo, sessionService, permissionService, keyStore, cfg.App.Name)
+	authService := auth.NewService(userRepo, sessionService, permissionService, keyStore, cfg.App.Name, tokenRevocationCache)
 	authHandler := auth.NewHandler(authService, userService)
 
 	// Setup auth routes
@@ -58,7 +67,8 @@ func SetupRoutes(app *fiber.App, envConfig *config.Environment, cfg *config.Conf
 	authGroup.Post("/register", authHandler.Register)
 
 	protectedGroup := api.Group("")
-	protectedGroup.Use(auth.AuthMiddleware(keyStore, authService, cfg.App.Name, []string{}))
+	authServiceRepoAdapter := auth.NewServiceRepositoryAdapter(serviceCache)
+	protectedGroup.Use(auth.AuthMiddleware(keyStore, authService, cfg.App.Name, authServiceRepoAdapter))
 	protectedGroup.Get("/user/info", authHandler.GetUserInfo)
 
 	app.Get("/.well-known/jwks.json", auth.JWKSHandler(keyStore))
