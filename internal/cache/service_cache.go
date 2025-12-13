@@ -96,23 +96,3 @@ func (c *ServiceCache) InvalidateByDomain(ctx context.Context, domain string) er
 	}
 	return err
 }
-
-// InvalidateAll removes all service cache entries
-func (c *ServiceCache) InvalidateAll(ctx context.Context) error {
-	pattern := ServiceCachePrefix + "*"
-
-	if RedisClient == nil {
-		return fmt.Errorf("redis client not initialized")
-	}
-
-	keys, err := RedisClient.Keys(ctx, pattern).Result()
-	if err != nil {
-		return fmt.Errorf("failed to get cache keys: %w", err)
-	}
-
-	if len(keys) > 0 {
-		return RedisClient.Del(ctx, keys...).Err()
-	}
-
-	return nil
-}
