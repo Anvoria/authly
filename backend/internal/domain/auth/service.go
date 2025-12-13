@@ -3,7 +3,9 @@ package auth
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/Anvoria/authly/internal/cache"
@@ -16,7 +18,6 @@ import (
 
 // LoginResponse represents the response from a successful login
 type LoginResponse struct {
-	AccessToken  string             `json:"access_token"`
 	RefreshToken string             `json:"refresh_token"`
 	RefreshSID   string             `json:"refresh_sid"`
 	User         *user.UserResponse `json:"user"`
@@ -51,55 +52,34 @@ func NewService(users user.Repository, sessions session.Service, permService per
 	}
 }
 
-// BuildAudience builds audience list from scopes
-// Returns list of client_ids that user has access to
-// BuildAudience extracts unique client_ids from the given scope keys.
-// Each key is expected in the form "client_id" or "client_id:resource"; the returned
-// slice contains each client_id at most once in no particular order.
-func BuildAudience(scopes map[string]uint64) []string {
-	audMap := make(map[string]bool)
-	for scopeKey := range scopes {
-		// Extract client_id from scope key (format: "client_id" or "client_id:resource")
-		clientID := scopeKey
-		// Find first colon to extract client_id
-		for i := 0; i < len(scopeKey); i++ {
-			if scopeKey[i] == ':' {
-				clientID = scopeKey[:i]
-				break
-			}
-		}
-		if clientID != "" {
-			audMap[clientID] = true
-		}
-	}
-
-	aud := make([]string, 0, len(audMap))
-	for clientID := range audMap {
-		aud = append(aud, clientID)
-	}
-	return aud
-}
-
-func (s *Service) GenerateAccessToken(sub, sid string, scopes map[string]uint64, pver int) (string, error) {
+// GenerateAccessToken generates an OIDC-compliant access token
+// scopes: OIDC scope strings (e.g., ["openid", "profile]")
+// audience: resource server identifier (e.g., "api:clientID" or clientID)
+// permissions: optional permissions map for internal authorization
+func (s *Service) GenerateAccessToken(sub, sid string, scopes []string, audience string, permissions map[string]uint64, pver int) (string, error) {
 	now := time.Now()
 	exp := now.Add(15 * time.Minute)
 
-	// Build audience from scopes
-	aud := BuildAudience(scopes)
+	accessTokenScopes := filterAccessTokenScopes(scopes)
 
-	// Build token
 	token, err := jwt.NewBuilder().
 		Subject(sub).
-		Audience(aud).
+		Audience([]string{audience}).
 		Issuer(s.issuer).
 		IssuedAt(now).
 		Expiration(exp).
 		Claim("sid", sid).
-		Claim("scopes", scopes).
+		Claim("scope", strings.Join(accessTokenScopes, " ")).
 		Claim("pver", pver).
 		Build()
 	if err != nil {
 		return "", err
+	}
+
+	if len(permissions) > 0 {
+		if err := token.Set("permissions", permissions); err != nil {
+			return "", fmt.Errorf("failed to set permissions claim: %w", err)
+		}
 	}
 
 	claims := &AccessTokenClaims{
@@ -108,6 +88,18 @@ func (s *Service) GenerateAccessToken(sub, sid string, scopes map[string]uint64,
 	}
 
 	return s.KeyStore.Sign(claims)
+}
+
+// filterAccessTokenScopes removes OIDC scopes that don't belong in access token
+// openid, profile, email are for ID token/userinfo, not access token
+func filterAccessTokenScopes(scopes []string) []string {
+	filtered := make([]string, 0, len(scopes))
+	for _, scope := range scopes {
+		if scope != "openid" && scope != "profile" && scope != "email" {
+			filtered = append(filtered, scope)
+		}
+	}
+	return filtered
 }
 
 func (s *Service) Login(username, password, userAgent, ip string) (*LoginResponse, error) {
@@ -123,30 +115,12 @@ func (s *Service) Login(username, password, userAgent, ip string) (*LoginRespons
 		return nil, ErrInvalidCredentials
 	}
 
-	// Build scopes from user permissions
-	scopes, err := s.PermissionService.BuildScopes(u.ID.String())
-	if err != nil {
-		return nil, err
-	}
-
-	// Get permission version (for cache invalidation)
-	pver, err := s.PermissionService.GetPermissionVersion(u.ID.String())
-	if err != nil {
-		// Default to 1 if error
-		pver = 1
-	}
-
 	sid, secret, err := s.Sessions.Create(u.ID, userAgent, ip, 24*time.Hour)
 	if err != nil {
 		return nil, err
 	}
 
-	access, err := s.GenerateAccessToken(u.ID.String(), sid.String(), scopes, pver)
-	if err != nil {
-		return nil, err
-	}
 	return &LoginResponse{
-		AccessToken:  access,
 		RefreshToken: secret,
 		RefreshSID:   sid.String(),
 		User:         u.ToResponse(),

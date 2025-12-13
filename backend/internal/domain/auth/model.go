@@ -53,29 +53,44 @@ func (c *AccessTokenClaims) GetSid() string {
 	return c.Sid
 }
 
-// GetScopes extracts scopes from the token claims
-func (c *AccessTokenClaims) GetScopes() map[string]uint64 {
-	var scopes map[string]uint64
-	var scopesAny any
-	if c.Token.Get("scopes", &scopesAny) == nil {
-		if s, ok := scopesAny.(map[string]uint64); ok {
-			scopes = s
-		} else if s, ok := scopesAny.(map[string]interface{}); ok {
-			// Handle map[string]interface{} from JSON unmarshaling
-			scopes = make(map[string]uint64)
-			for k, v := range s {
+// GetPermissions extracts permissions from the token claims
+// Permissions are stored in the "permissions" claim, not "scopes"
+func (c *AccessTokenClaims) GetPermissions() map[string]uint64 {
+	var permissions map[string]uint64
+	var permissionsAny any
+	if c.Token.Get("permissions", &permissionsAny) == nil {
+		if p, ok := permissionsAny.(map[string]uint64); ok {
+			permissions = p
+		} else if p, ok := permissionsAny.(map[string]any); ok {
+			permissions = make(map[string]uint64)
+			for k, v := range p {
 				if u, ok := v.(uint64); ok {
-					scopes[k] = u
+					permissions[k] = u
 				} else if f, ok := v.(float64); ok {
-					scopes[k] = uint64(f)
+					permissions[k] = uint64(f)
 				}
 			}
 		}
 	}
-	if scopes == nil {
-		scopes = make(map[string]uint64)
+	if permissions == nil {
+		permissions = make(map[string]uint64)
 	}
-	return scopes
+	return permissions
+}
+
+// GetScopes is deprecated - use GetPermissions instead
+// Kept for backward compatibility but returns permissions from "permissions" claim
+func (c *AccessTokenClaims) GetScopes() map[string]uint64 {
+	return c.GetPermissions()
+}
+
+// GetScopeString extracts OIDC scope string from token claims
+func (c *AccessTokenClaims) GetScopeString() string {
+	var scope string
+	if c.Token.Get("scope", &scope) == nil {
+		return scope
+	}
+	return ""
 }
 
 // GetPermissionV extracts permission version from the token claims

@@ -259,19 +259,30 @@ func (s *Service) ExchangeCode(req *TokenRequest, sessionID uuid.UUID, refreshSe
 		return nil, fmt.Errorf("failed to mark code as used: %w", err)
 	}
 
-	// Build scopes from authorization code
-	scopeList := strings.Fields(authCode.Scopes)
-	scopes, err := s.buildScopesForClient(authCode.UserID.String(), req.ClientID, scopeList)
+	oidcScopes := strings.Fields(authCode.Scopes)
+
+	permissions, err := s.permissionService.BuildScopes(authCode.UserID.String())
 	if err != nil {
-		return nil, fmt.Errorf("failed to build scopes: %w", err)
+		return nil, fmt.Errorf("failed to build permissions: %w", err)
 	}
+
+	clientPermissions := s.filterPermissionsForClient(permissions, req.ClientID)
 
 	pver, err := s.permissionService.GetPermissionVersion(authCode.UserID.String())
 	if err != nil {
 		pver = 1
 	}
 
-	accessToken, err := s.authService.GenerateAccessToken(authCode.UserID.String(), sessionID.String(), scopes, pver)
+	audience := req.ClientID
+
+	accessToken, err := s.authService.GenerateAccessToken(
+		authCode.UserID.String(),
+		sessionID.String(),
+		oidcScopes,
+		audience,
+		clientPermissions,
+		pver,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate access token: %w", err)
 	}
@@ -285,28 +296,17 @@ func (s *Service) ExchangeCode(req *TokenRequest, sessionID uuid.UUID, refreshSe
 	}, nil
 }
 
-// buildScopesForClient builds scopes map for a specific client from requested scopes
-func (s *Service) buildScopesForClient(userID, clientID string, requestedScopes []string) (map[string]uint64, error) {
-	allScopes, err := s.permissionService.BuildScopes(userID)
-	if err != nil {
-		return nil, err
-	}
-
-	clientScopes := make(map[string]uint64)
-	requestedSet := make(map[string]bool)
-	for _, scope := range requestedScopes {
-		requestedSet[scope] = true
-	}
-
-	for scopeKey, bitmask := range allScopes {
+// filterPermissionsForClient filters permissions map to only include permissions for the given client
+// This is for internal authorization, not OIDC scopes
+func (s *Service) filterPermissionsForClient(allPermissions map[string]uint64, clientID string) map[string]uint64 {
+	clientPermissions := make(map[string]uint64)
+	for scopeKey, bitmask := range allPermissions {
+		// Include if it's for this client (format: "clientID" or "clientID:resource")
 		if scopeKey == clientID || strings.HasPrefix(scopeKey, clientID+":") {
-			if requestedSet[scopeKey] || scopeKey == clientID {
-				clientScopes[scopeKey] = bitmask
-			}
+			clientPermissions[scopeKey] = bitmask
 		}
 	}
-
-	return clientScopes, nil
+	return clientPermissions
 }
 
 // verifyCodeVerifier verifies code_verifier against code_challenge using the specified method
