@@ -9,6 +9,7 @@ import (
 	"github.com/Anvoria/authly/internal/database"
 	"github.com/Anvoria/authly/internal/migrations"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 )
 
 // Start initializes and starts the HTTP server
@@ -16,6 +17,16 @@ func Start(cfg *config.Config) error {
 	initLogger(cfg.Logging.Level)
 
 	app := fiber.New()
+
+	// Configure CORS
+	app.Use(cors.New(cors.Config{
+		AllowOrigins:     "http://localhost:3000,http://localhost:8000",
+		AllowMethods:     "GET,POST,PUT,DELETE,PATCH,OPTIONS",
+		AllowHeaders:     "Origin,Content-Type,Accept,Authorization",
+		AllowCredentials: true,
+		ExposeHeaders:    "Content-Length",
+		MaxAge:           3600,
+	}))
 
 	if err := database.ConnectDB(cfg); err != nil {
 		slog.Error("Failed to connect to database", "error", err)
