@@ -1,0 +1,18 @@
+{
+  "semi": true,
+  "printWidth": 120,
+  "useTabs": false,
+  "tabWidth": 4,
+  "arrowParens": "always",
+  "singleQuote": false,
+  "trailingComma": "all",
+  "endOfLine": "auto",
+  "overrides": [
+    {
+      "files": "**/*.{json,jsonc}",
+      "options": {
+        "trailingComma": "none"
+      }
+    }
+  ]
+}

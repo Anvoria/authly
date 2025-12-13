@@ -8,7 +8,7 @@
     "start": "bunx next start",
     "lint": "bunx eslint .",
     "lint:fix": "bunx eslint --fix .",
-    "format": "bunx prettier --write ."
+    "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,json,css,md}\" --config .prettierc.json"
   },
   "dependencies": {
     "clsx": "^2.1.1",
@@ -24,6 +24,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.0.10",
+    "prettier": "^3.7.4",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
