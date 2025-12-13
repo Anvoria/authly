@@ -67,17 +67,3 @@ func (h *Handler) Register(c *fiber.Ctx) error {
 		"user": res,
 	}, "User registered successfully")
 }
-
-func (h *Handler) GetUserInfo(c *fiber.Ctx) error {
-	identity := GetIdentity(c)
-	if identity == nil {
-		return utils.ErrorResponse(c, ErrUnauthorized.Error(), fiber.StatusUnauthorized)
-	}
-
-	userInfo, err := h.userService.GetUserInfo(identity.UserID)
-	if err != nil {
-		return utils.ErrorResponse(c, err.Error(), fiber.StatusInternalServerError)
-	}
-
-	return utils.SuccessResponse(c, userInfo.ToResponse(), "User info retrieved successfully")
-}

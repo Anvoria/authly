@@ -15,6 +15,7 @@ import (
 	"github.com/Anvoria/authly/internal/domain/permission"
 	svc "github.com/Anvoria/authly/internal/domain/service"
 	"github.com/Anvoria/authly/internal/domain/session"
+	"github.com/Anvoria/authly/internal/domain/user"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -23,6 +24,7 @@ import (
 type ServiceInterface interface {
 	Authorize(req *AuthorizeRequest, userID uuid.UUID) (*AuthorizeResponse, error)
 	ExchangeCode(req *TokenRequest, sessionID uuid.UUID, refreshSecret string) (*TokenResponse, error)
+	GetUserInfo(userID string, scopes []string) (map[string]interface{}, error)
 }
 
 // Service handles OIDC operations
@@ -33,10 +35,11 @@ type Service struct {
 	authService       *auth.Service
 	sessionService    session.Service
 	permissionService permission.ServiceInterface
+	userService       user.Service
 }
 
 // NewService creates a new OIDC service
-func NewService(serviceRepo svc.Repository, codeRepo Repository, authService *auth.Service, sessionService session.Service, permissionService permission.ServiceInterface) ServiceInterface {
+func NewService(serviceRepo svc.Repository, codeRepo Repository, authService *auth.Service, sessionService session.Service, permissionService permission.ServiceInterface, userService user.Service) ServiceInterface {
 	return &Service{
 		serviceRepo:       serviceRepo,
 		codeRepo:          codeRepo,
@@ -44,6 +47,7 @@ func NewService(serviceRepo svc.Repository, codeRepo Repository, authService *au
 		authService:       authService,
 		sessionService:    sessionService,
 		permissionService: permissionService,
+		userService:       userService,
 	}
 }
 
@@ -326,4 +330,39 @@ func (s *Service) verifyCodeVerifier(codeVerifier, codeChallenge, method string)
 	}
 
 	return nil
+}
+
+// GetUserInfo returns user information based on requested scopes
+// Only returns claims that are allowed by the scopes
+func (s *Service) GetUserInfo(userID string, scopes []string) (map[string]interface{}, error) {
+	u, err := s.userService.GetUserInfo(userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+
+	scopeSet := make(map[string]bool)
+	for _, scope := range scopes {
+		scopeSet[scope] = true
+	}
+
+	claims := make(map[string]any)
+
+	claims["sub"] = u.ID.String()
+
+	// profile scope claims
+	if scopeSet["profile"] {
+		claims["name"] = fmt.Sprintf("%s %s", u.FirstName, u.LastName)
+		claims["preferred_username"] = u.Username
+		claims["given_name"] = u.FirstName
+		claims["family_name"] = u.LastName
+	}
+
+	if scopeSet["email"] {
+		if u.Email != "" {
+			claims["email"] = u.Email
+			claims["email_verified"] = false
+		}
+	}
+
+	return claims, nil
 }

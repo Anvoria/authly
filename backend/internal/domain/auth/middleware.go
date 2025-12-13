@@ -127,6 +127,7 @@ func AuthMiddleware(keyStore *KeyStore, svc AuthService, issuer string, serviceR
 
 		c.Locals(IdentityKey, identity)
 		c.Locals(ScopesKey, scopes)
+		c.Locals("token_claims", claims) // Store claims for userinfo endpoint
 
 		return c.Next()
 	}

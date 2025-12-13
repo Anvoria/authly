@@ -3,6 +3,7 @@ package auth
 import (
 	"errors"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/lestrrat-go/jwx/v3/jwt"
@@ -91,6 +92,22 @@ func (c *AccessTokenClaims) GetScopeString() string {
 		return scope
 	}
 	return ""
+}
+
+// GetRequestedScopes extracts all requested scopes from token claims
+// Returns the "requested_scopes" claim (all scopes including openid, profile, email)
+func (c *AccessTokenClaims) GetRequestedScopes() []string {
+	var requestedScopes string
+	if c.Token.Get("requested_scopes", &requestedScopes) == nil {
+		if requestedScopes != "" {
+			return strings.Fields(requestedScopes)
+		}
+	}
+	scope := c.GetScopeString()
+	if scope != "" {
+		return strings.Fields(scope)
+	}
+	return []string{}
 }
 
 // GetPermissionV extracts permission version from the token claims

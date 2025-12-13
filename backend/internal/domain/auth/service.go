@@ -69,7 +69,8 @@ func (s *Service) GenerateAccessToken(sub, sid string, scopes []string, audience
 		IssuedAt(now).
 		Expiration(exp).
 		Claim("sid", sid).
-		Claim("scope", strings.Join(accessTokenScopes, " ")).
+		Claim("scope", strings.Join(accessTokenScopes, " ")). // Scopes for access token (filtered)
+		Claim("requested_scopes", strings.Join(scopes, " ")). // All requested scopes (for userinfo)
 		Claim("pver", pver).
 		Build()
 	if err != nil {

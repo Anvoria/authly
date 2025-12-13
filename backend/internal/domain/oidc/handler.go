@@ -181,3 +181,29 @@ func (h *Handler) Token(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(res)
 }
+
+// UserInfo handles the OIDC UserInfo endpoint
+// Returns user information based on scopes from the access token
+func (h *Handler) UserInfo(c *fiber.Ctx) error {
+	identity, ok := c.Locals(auth.IdentityKey).(*auth.Identity)
+	if !ok || identity == nil {
+		return utils.OIDCErrorResponse(c, "invalid_token", "Invalid or missing access token", fiber.StatusUnauthorized)
+	}
+
+	claims, ok := c.Locals("token_claims").(*auth.AccessTokenClaims)
+	if !ok || claims == nil {
+		return utils.OIDCErrorResponse(c, "invalid_token", "Unable to extract token claims", fiber.StatusUnauthorized)
+	}
+
+	scopes := claims.GetRequestedScopes()
+	if len(scopes) == 0 {
+		scopes = []string{"openid"}
+	}
+
+	userInfo, err := h.service.GetUserInfo(identity.UserID, scopes)
+	if err != nil {
+		return utils.OIDCErrorResponse(c, "server_error", err.Error(), fiber.StatusInternalServerError)
+	}
+
+	return c.Status(fiber.StatusOK).JSON(userInfo)
+}

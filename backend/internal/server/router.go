@@ -72,17 +72,20 @@ func SetupRoutes(app *fiber.App, envConfig *config.Environment, cfg *config.Conf
 	protectedGroup := api.Group("")
 	authServiceRepoAdapter := auth.NewServiceRepositoryAdapter(serviceCache)
 	protectedGroup.Use(auth.AuthMiddleware(keyStore, authService, issuer, authServiceRepoAdapter))
-	protectedGroup.Get("/userinfo", authHandler.GetUserInfo)
 
 	// Initialize OIDC repositories and services
 	authCodeRepo := oidc.NewRepository(database.DB)
-	oidcService := oidc.NewService(serviceRepo, authCodeRepo, authService, sessionService, permissionService)
+	oidcService := oidc.NewService(serviceRepo, authCodeRepo, authService, sessionService, permissionService, userService)
 	oidcHandler := oidc.NewHandler(oidcService)
 
 	oauthGroup := api.Group("/oauth")
 	oauthGroup.Use(oidc.SessionMiddleware(sessionService, permissionService))
 	oauthGroup.Get("/authorize", oidcHandler.Authorize)
 	oauthGroup.Post("/token", oidcHandler.Token)
+
+	oauthGroupProtected := api.Group("/oauth")
+	oauthGroupProtected.Use(auth.AuthMiddleware(keyStore, authService, issuer, authServiceRepoAdapter))
+	oauthGroupProtected.Get("/userinfo", oidcHandler.UserInfo)
 
 	// Setup well-known endpoints
 	app.Get("/.well-known/jwks.json", auth.JWKSHandler(keyStore))
