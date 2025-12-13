@@ -37,12 +37,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
     return (
-        <html lang="en" suppressHydrationWarning>
-            <body
-                className={[sora.variable, mono.variable, "min-h-screen", "bg-black", "text-white", "antialiased"].join(
-                    " ",
-                )}
-            >
+        <html lang="en" suppressHydrationWarning className={`${sora.variable} ${mono.variable}`}>
+            <body className="font-display antialiased">
                 {children}
             </body>
         </html>
