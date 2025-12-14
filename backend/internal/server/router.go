@@ -69,6 +69,10 @@ func SetupRoutes(app *fiber.App, envConfig *config.Environment, cfg *config.Conf
 	authGroup.Post("/login", authHandler.Login)
 	authGroup.Post("/register", authHandler.Register)
 
+	authSessionGroup := api.Group("/auth")
+	authSessionGroup.Use(oidc.SessionMiddleware(sessionService, permissionService))
+	authSessionGroup.Get("/me", authHandler.Me)
+
 	protectedGroup := api.Group("")
 	authServiceRepoAdapter := auth.NewServiceRepositoryAdapter(serviceCache)
 	protectedGroup.Use(auth.AuthMiddleware(keyStore, authService, issuer, authServiceRepoAdapter))

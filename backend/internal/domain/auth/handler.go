@@ -67,3 +67,20 @@ func (h *Handler) Register(c *fiber.Ctx) error {
 		"user": res,
 	}, "User registered successfully")
 }
+
+// Me returns the current authenticated user information based on session cookie
+func (h *Handler) Me(c *fiber.Ctx) error {
+	identity, ok := c.Locals(IdentityKey).(*Identity)
+	if !ok || identity == nil {
+		return utils.ErrorResponse(c, "not_authenticated", fiber.StatusUnauthorized)
+	}
+
+	user, err := h.userService.GetUserInfo(identity.UserID)
+	if err != nil {
+		return utils.ErrorResponse(c, "user_not_found", fiber.StatusNotFound)
+	}
+
+	return utils.SuccessResponse(c, fiber.Map{
+		"user": user.ToResponse(),
+	}, "User information retrieved successfully")
+}
