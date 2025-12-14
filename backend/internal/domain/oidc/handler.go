@@ -32,7 +32,7 @@ func OpenIDConfigurationHandler(domain string) fiber.Handler {
 			"jwks_uri":               domain + "/v1/.well-known/jwks.json",
 
 			"scopes_supported": []string{
-				"openid", "profile", "email", "tp", "ke",
+				"openid", "profile", "email",
 			},
 
 			"response_types_supported": []string{"code"},
