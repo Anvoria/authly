@@ -164,7 +164,7 @@ func (s *Service) validatePKCE(codeChallenge, codeChallengeMethod string) error 
 		return ErrInvalidCodeChallenge
 	}
 
-	if codeChallengeMethod != "s256" && codeChallengeMethod != "S256" {
+	if codeChallengeMethod != "s256" && codeChallengeMethod != "S256" && codeChallengeMethod != "" {
 		return ErrInvalidCodeChallengeMethod
 	}
 
@@ -334,7 +334,7 @@ func (s *Service) filterPermissionsForClient(allPermissions map[string]uint64, c
 
 // verifyCodeVerifier verifies code_verifier against code_challenge using the specified method
 func (s *Service) verifyCodeVerifier(codeVerifier, codeChallenge, method string) error {
-	if method != "S256" {
+	if method != "s256" && method != "S256" {
 		return ErrInvalidCodeChallengeMethod
 	}
 
@@ -519,7 +519,7 @@ func (s *Service) ValidateAuthorizationRequest(req *AuthorizeRequest) *ValidateA
 				errorDesc = "Invalid code_challenge format"
 			case ErrInvalidCodeChallengeMethod:
 				errorCode = "unsupported_code_challenge_method"
-				errorDesc = "Only 'S256' code_challenge_method is supported"
+				errorDesc = "Only 's256' or 'S256' code_challenge_method is supported"
 			default:
 				errorCode = "invalid_request"
 				errorDesc = err.Error()

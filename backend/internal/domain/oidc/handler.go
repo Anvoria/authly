@@ -343,6 +343,17 @@ func (h *Handler) ConfirmAuthorization(c *fiber.Ctx) error {
 		redirectURI += "&state=" + res.State
 	}
 
+	if req.CodeChallenge != "" {
+		redirectURI += "&code_challenge=" + req.CodeChallenge
+	}
+	if req.CodeChallengeMethod != "" {
+		redirectURI += "&code_challenge_method=" + req.CodeChallengeMethod
+	}
+
+	if req.ClientID != "" {
+		redirectURI += "&client_id=" + req.ClientID
+	}
+
 	return c.Status(fiber.StatusOK).JSON(&ConfirmAuthorizationResponse{
 		Success:     true,
 		RedirectURI: redirectURI,
