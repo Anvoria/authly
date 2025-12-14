@@ -207,3 +207,144 @@ func (h *Handler) UserInfo(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(userInfo)
 }
+
+// ValidateAuthorization validates an OAuth2/OIDC authorization request
+// This endpoint does not require authentication and is used by frontend to validate request parameters
+func (h *Handler) ValidateAuthorization(c *fiber.Ctx) error {
+	var req AuthorizeRequest
+	if err := c.QueryParser(&req); err != nil {
+		return c.Status(fiber.StatusOK).JSON(&ValidateAuthorizationRequestResponse{
+			Valid:            false,
+			Error:            "invalid_request",
+			ErrorDescription: "Failed to parse query parameters: " + err.Error(),
+		})
+	}
+
+	res := h.service.ValidateAuthorizationRequest(&req)
+	return c.Status(fiber.StatusOK).JSON(res)
+}
+
+// ConfirmAuthorization handles the OAuth2/OIDC authorization confirmation
+// This endpoint is called after user confirms authorization on the frontend
+func (h *Handler) ConfirmAuthorization(c *fiber.Ctx) error {
+	var req ConfirmAuthorizationRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusOK).JSON(&ConfirmAuthorizationResponse{
+			Success:          false,
+			Error:            "invalid_request",
+			ErrorDescription: "Failed to parse request body: " + err.Error(),
+		})
+	}
+
+	// Validate required fields
+	if req.ResponseType == "" {
+		return c.Status(fiber.StatusOK).JSON(&ConfirmAuthorizationResponse{
+			Success:          false,
+			Error:            "invalid_request",
+			ErrorDescription: "response_type is required",
+		})
+	}
+	if req.ClientID == "" {
+		return c.Status(fiber.StatusOK).JSON(&ConfirmAuthorizationResponse{
+			Success:          false,
+			Error:            "invalid_request",
+			ErrorDescription: "client_id is required",
+		})
+	}
+	if req.RedirectURI == "" {
+		return c.Status(fiber.StatusOK).JSON(&ConfirmAuthorizationResponse{
+			Success:          false,
+			Error:            "invalid_request",
+			ErrorDescription: "redirect_uri is required",
+		})
+	}
+	if req.Scope == "" {
+		return c.Status(fiber.StatusOK).JSON(&ConfirmAuthorizationResponse{
+			Success:          false,
+			Error:            "invalid_request",
+			ErrorDescription: "scope is required",
+		})
+	}
+
+	// Check if user is authenticated
+	identity, ok := c.Locals(auth.IdentityKey).(*auth.Identity)
+	if !ok || identity == nil {
+		return c.Status(fiber.StatusOK).JSON(&ConfirmAuthorizationResponse{
+			Success:          false,
+			Error:            "login_required",
+			ErrorDescription: "User must be logged in to confirm authorization",
+		})
+	}
+
+	userID, err := uuid.Parse(identity.UserID)
+	if err != nil {
+		return c.Status(fiber.StatusOK).JSON(&ConfirmAuthorizationResponse{
+			Success:          false,
+			Error:            "server_error",
+			ErrorDescription: "Invalid user ID",
+		})
+	}
+
+	// Convert ConfirmAuthorizationRequest to AuthorizeRequest
+	authorizeReq := &AuthorizeRequest{
+		ResponseType:        req.ResponseType,
+		ClientID:            req.ClientID,
+		RedirectURI:         req.RedirectURI,
+		Scope:               req.Scope,
+		State:               req.State,
+		CodeChallenge:       req.CodeChallenge,
+		CodeChallengeMethod: req.CodeChallengeMethod,
+	}
+
+	// Call service to authorize
+	res, err := h.service.Authorize(authorizeReq, userID)
+	if err != nil {
+		var errorCode string
+		var errorDesc string
+		switch err {
+		case ErrInvalidClientID:
+			errorCode = "invalid_client"
+			errorDesc = "Invalid client_id"
+		case ErrInvalidRedirectURI:
+			errorCode = "invalid_redirect_uri"
+			errorDesc = "The redirect_uri is not allowed for this client"
+		case ErrInvalidScope:
+			errorCode = "invalid_scope"
+			errorDesc = "One or more requested scopes are not allowed"
+		case ErrInvalidResponseType:
+			errorCode = "unsupported_response_type"
+			errorDesc = "Only 'code' response_type is supported"
+		case ErrInvalidCodeChallenge:
+			errorCode = "invalid_code_challenge"
+			errorDesc = "Invalid code_challenge format"
+		case ErrInvalidCodeChallengeMethod:
+			errorCode = "unsupported_code_challenge_method"
+			errorDesc = "Only 'S256' code_challenge_method is supported"
+		case ErrClientNotActive:
+			errorCode = "unauthorized_client"
+			errorDesc = "Client is not active"
+		case ErrUnauthorizedClient:
+			errorCode = "unauthorized_client"
+			errorDesc = "Client is not authorized"
+		default:
+			errorCode = "server_error"
+			errorDesc = err.Error()
+		}
+		return c.Status(fiber.StatusOK).JSON(&ConfirmAuthorizationResponse{
+			Success:          false,
+			Error:            errorCode,
+			ErrorDescription: errorDesc,
+		})
+	}
+
+	// Build redirect URI with code and state
+	redirectURI := req.RedirectURI + "?code=" + res.Code
+	if res.State != "" {
+		redirectURI += "&state=" + res.State
+	}
+
+	return c.Status(fiber.StatusOK).JSON(&ConfirmAuthorizationResponse{
+		Success:     true,
+		RedirectURI: redirectURI,
+	})
+}

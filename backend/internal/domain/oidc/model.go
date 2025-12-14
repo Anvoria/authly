@@ -44,6 +44,25 @@ type TokenResponse struct {
 	IDToken      string `json:"id_token,omitempty"`
 }
 
+// ConfirmAuthorizationRequest represents the request to confirm authorization
+type ConfirmAuthorizationRequest struct {
+	ClientID            string `json:"client_id" validate:"required"`
+	RedirectURI         string `json:"redirect_uri" validate:"required,url"`
+	ResponseType        string `json:"response_type" validate:"required,oneof=code"`
+	Scope               string `json:"scope" validate:"required"`
+	State               string `json:"state"`
+	CodeChallenge       string `json:"code_challenge"`
+	CodeChallengeMethod string `json:"code_challenge_method" validate:"omitempty,oneof=s256 S256"`
+}
+
+// ConfirmAuthorizationResponse represents the response from authorization confirmation
+type ConfirmAuthorizationResponse struct {
+	Success          bool   `json:"success"`
+	RedirectURI      string `json:"redirect_uri,omitempty"`
+	Error            string `json:"error,omitempty"`
+	ErrorDescription string `json:"error_description,omitempty"`
+}
+
 // AuthorizationCode represents an OAuth2 authorization code
 type AuthorizationCode struct {
 	database.BaseModel

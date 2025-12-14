@@ -20,11 +20,30 @@ import (
 	"gorm.io/gorm"
 )
 
+// ValidateAuthorizationRequestResponse represents the response from authorization request validation
+type ValidateAuthorizationRequestResponse struct {
+	Valid            bool        `json:"valid"`
+	Client           *ClientInfo `json:"client,omitempty"`
+	Error            string      `json:"error,omitempty"`
+	ErrorDescription string      `json:"error_description,omitempty"`
+}
+
+// ClientInfo represents client information for validation response
+type ClientInfo struct {
+	ID            string   `json:"id"`
+	Name          string   `json:"name"`
+	LogoURL       *string  `json:"logo_url,omitempty"`
+	RedirectURIs  []string `json:"redirect_uris"`
+	AllowedScopes []string `json:"allowed_scopes"`
+	Active        bool     `json:"active"`
+}
+
 // ServiceInterface defines the interface for OIDC operations
 type ServiceInterface interface {
 	Authorize(req *AuthorizeRequest, userID uuid.UUID) (*AuthorizeResponse, error)
 	ExchangeCode(req *TokenRequest, sessionID uuid.UUID, refreshSecret string) (*TokenResponse, error)
 	GetUserInfo(userID string, scopes []string) (map[string]interface{}, error)
+	ValidateAuthorizationRequest(req *AuthorizeRequest) *ValidateAuthorizationRequestResponse
 }
 
 // Service handles OIDC operations
@@ -145,7 +164,7 @@ func (s *Service) validatePKCE(codeChallenge, codeChallengeMethod string) error 
 		return ErrInvalidCodeChallenge
 	}
 
-	if codeChallengeMethod != "S256" {
+	if codeChallengeMethod != "s256" && codeChallengeMethod != "S256" {
 		return ErrInvalidCodeChallengeMethod
 	}
 
@@ -365,4 +384,170 @@ func (s *Service) GetUserInfo(userID string, scopes []string) (map[string]interf
 	}
 
 	return claims, nil
+}
+
+// ValidateAuthorizationRequest validates an OAuth2/OIDC authorization request without requiring authentication
+// Returns a response indicating if the request is valid and includes client information if valid
+func (s *Service) ValidateAuthorizationRequest(req *AuthorizeRequest) *ValidateAuthorizationRequestResponse {
+	// Validate response_type
+	if req.ResponseType == "" {
+		return &ValidateAuthorizationRequestResponse{
+			Valid:            false,
+			Error:            "invalid_request",
+			ErrorDescription: "response_type is required",
+		}
+	}
+	if req.ResponseType != "code" {
+		return &ValidateAuthorizationRequestResponse{
+			Valid:            false,
+			Error:            "unsupported_response_type",
+			ErrorDescription: "Only 'code' response_type is supported",
+		}
+	}
+
+	// Validate client_id
+	if req.ClientID == "" {
+		return &ValidateAuthorizationRequestResponse{
+			Valid:            false,
+			Error:            "invalid_request",
+			ErrorDescription: "client_id is required",
+		}
+	}
+
+	// Find service by client_id
+	service, err := s.serviceRepo.FindByClientID(req.ClientID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return &ValidateAuthorizationRequestResponse{
+				Valid:            false,
+				Error:            "invalid_client",
+				ErrorDescription: "Client not found",
+			}
+		}
+		return &ValidateAuthorizationRequestResponse{
+			Valid:            false,
+			Error:            "server_error",
+			ErrorDescription: "Failed to validate client",
+		}
+	}
+
+	// Check if service is active
+	if !service.Active {
+		return &ValidateAuthorizationRequestResponse{
+			Valid:            false,
+			Error:            "unauthorized_client",
+			ErrorDescription: "Client is not active",
+			Client: &ClientInfo{
+				ID:            service.ID.String(),
+				Name:          service.Name,
+				RedirectURIs:  service.RedirectURIs,
+				AllowedScopes: service.AllowedScopes,
+				Active:        service.Active,
+			},
+		}
+	}
+
+	// Validate redirect_uri
+	if req.RedirectURI == "" {
+		return &ValidateAuthorizationRequestResponse{
+			Valid:            false,
+			Error:            "invalid_request",
+			ErrorDescription: "redirect_uri is required",
+			Client: &ClientInfo{
+				ID:            service.ID.String(),
+				Name:          service.Name,
+				RedirectURIs:  service.RedirectURIs,
+				AllowedScopes: service.AllowedScopes,
+				Active:        service.Active,
+			},
+		}
+	}
+	if !s.isValidRedirectURI(service.RedirectURIs, req.RedirectURI) {
+		return &ValidateAuthorizationRequestResponse{
+			Valid:            false,
+			Error:            "invalid_redirect_uri",
+			ErrorDescription: "The redirect_uri is not allowed for this client",
+			Client: &ClientInfo{
+				ID:            service.ID.String(),
+				Name:          service.Name,
+				RedirectURIs:  service.RedirectURIs,
+				AllowedScopes: service.AllowedScopes,
+				Active:        service.Active,
+			},
+		}
+	}
+
+	// Validate scopes
+	if req.Scope == "" {
+		return &ValidateAuthorizationRequestResponse{
+			Valid:            false,
+			Error:            "invalid_request",
+			ErrorDescription: "scope is required",
+			Client: &ClientInfo{
+				ID:            service.ID.String(),
+				Name:          service.Name,
+				RedirectURIs:  service.RedirectURIs,
+				AllowedScopes: service.AllowedScopes,
+				Active:        service.Active,
+			},
+		}
+	}
+	requestedScopes := strings.Fields(req.Scope)
+	if !s.isValidScopes(service.AllowedScopes, requestedScopes) {
+		return &ValidateAuthorizationRequestResponse{
+			Valid:            false,
+			Error:            "invalid_scope",
+			ErrorDescription: "One or more requested scopes are not allowed",
+			Client: &ClientInfo{
+				ID:            service.ID.String(),
+				Name:          service.Name,
+				RedirectURIs:  service.RedirectURIs,
+				AllowedScopes: service.AllowedScopes,
+				Active:        service.Active,
+			},
+		}
+	}
+
+	// Validate PKCE if provided
+	if req.CodeChallenge != "" {
+		if err := s.validatePKCE(req.CodeChallenge, req.CodeChallengeMethod); err != nil {
+			var errorCode string
+			var errorDesc string
+			switch err {
+			case ErrInvalidCodeChallenge:
+				errorCode = "invalid_code_challenge"
+				errorDesc = "Invalid code_challenge format"
+			case ErrInvalidCodeChallengeMethod:
+				errorCode = "unsupported_code_challenge_method"
+				errorDesc = "Only 'S256' code_challenge_method is supported"
+			default:
+				errorCode = "invalid_request"
+				errorDesc = err.Error()
+			}
+			return &ValidateAuthorizationRequestResponse{
+				Valid:            false,
+				Error:            errorCode,
+				ErrorDescription: errorDesc,
+				Client: &ClientInfo{
+					ID:            service.ID.String(),
+					Name:          service.Name,
+					RedirectURIs:  service.RedirectURIs,
+					AllowedScopes: service.AllowedScopes,
+					Active:        service.Active,
+				},
+			}
+		}
+	}
+
+	// All validations passed
+	return &ValidateAuthorizationRequestResponse{
+		Valid: true,
+		Client: &ClientInfo{
+			ID:            service.ID.String(),
+			Name:          service.Name,
+			RedirectURIs:  service.RedirectURIs,
+			AllowedScopes: service.AllowedScopes,
+			Active:        service.Active,
+		},
+	}
 }

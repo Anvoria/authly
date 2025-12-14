@@ -73,9 +73,7 @@ func SetupRoutes(app *fiber.App, envConfig *config.Environment, cfg *config.Conf
 	authSessionGroup.Use(oidc.SessionMiddleware(sessionService, permissionService))
 	authSessionGroup.Get("/me", authHandler.Me)
 
-	protectedGroup := api.Group("")
 	authServiceRepoAdapter := auth.NewServiceRepositoryAdapter(serviceCache)
-	protectedGroup.Use(auth.AuthMiddleware(keyStore, authService, issuer, authServiceRepoAdapter))
 
 	// Initialize OIDC repositories and services
 	authCodeRepo := oidc.NewRepository(database.DB)
@@ -85,7 +83,10 @@ func SetupRoutes(app *fiber.App, envConfig *config.Environment, cfg *config.Conf
 	oauthGroup := api.Group("/oauth")
 	oauthGroup.Use(oidc.SessionMiddleware(sessionService, permissionService))
 	oauthGroup.Get("/authorize", oidcHandler.Authorize)
+	oauthGroup.Post("/authorize/confirm", oidcHandler.ConfirmAuthorization)
 	oauthGroup.Post("/token", oidcHandler.Token)
+
+	oauthGroup.Get("/authorize/validate", oidcHandler.ValidateAuthorization)
 
 	oauthGroupProtected := api.Group("/oauth")
 	oauthGroupProtected.Use(auth.AuthMiddleware(keyStore, authService, issuer, authServiceRepoAdapter))
