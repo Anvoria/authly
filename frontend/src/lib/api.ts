@@ -6,6 +6,7 @@ import {
     type RegisterResponse,
 } from "./schemas/auth/register";
 import { loginRequestSchema, loginResponseSchema, type LoginRequest, type LoginResponse } from "./schemas/auth/login";
+import { meResponseSchema, type MeResponse } from "./schemas/auth/me";
 import type { ApiError } from "./schemas/auth/login";
 
 export type { ApiError };
@@ -91,4 +92,49 @@ export async function register(data: RegisterRequest): Promise<RegisterResponse>
     };
 
     return registerResponseSchema.parse(successResponse);
+}
+
+export async function getMe(): Promise<MeResponse> {
+    const response = await GeneralClient.get<{
+        user: {
+            id: string;
+            username: string;
+            first_name: string;
+            last_name: string;
+            email: string | null;
+            is_active: boolean;
+            created_at: string;
+            updated_at: string;
+        };
+    }>("/auth/me");
+
+    if (!response.success) {
+        if ("isRedirect" in response && response.isRedirect) {
+            const errorResponse: MeResponse = {
+                success: false,
+                error: "redirect_occurred",
+            };
+            return meResponseSchema.parse(errorResponse);
+        }
+        if ("error" in response) {
+            const errorResponse: MeResponse = {
+                success: false,
+                error: response.error,
+            };
+            return meResponseSchema.parse(errorResponse);
+        }
+        const errorResponse: MeResponse = {
+            success: false,
+            error: "unknown_error",
+        };
+        return meResponseSchema.parse(errorResponse);
+    }
+
+    const successResponse: MeResponse = {
+        success: true,
+        data: response.data,
+        message: response.message ?? "",
+    };
+
+    return meResponseSchema.parse(successResponse);
 }

@@ -534,6 +534,7 @@ export default class GeneralClient extends BaseClient {
                     Accept: "application/json",
                 },
                 timeout: 10000,
+                withCredentials: true,
             });
         }
         return GeneralClient.axiosInstance;
