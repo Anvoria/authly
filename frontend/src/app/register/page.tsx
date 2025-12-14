@@ -1,11 +1,11 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect, useCallback } from "react";
 import AuthorizeLayout from "@/authly/components/authorize/AuthorizeLayout";
 import Input from "@/authly/components/ui/Input";
 import Button from "@/authly/components/ui/Button";
-import { register, type ApiError } from "@/authly/lib/api";
+import { register, getMe, type ApiError } from "@/authly/lib/api";
 import { registerFormSchema, registerRequestSchema, type RegisterFormData } from "@/authly/lib/schemas/auth/register";
 
 function RegisterPageContent() {
@@ -20,8 +20,25 @@ function RegisterPageContent() {
         confirmPassword: "",
     });
     const [isLoading, setIsLoading] = useState(false);
+    const [isCheckingAuth, setIsCheckingAuth] = useState(true);
     const [errors, setErrors] = useState<Partial<Record<keyof RegisterFormData, string>>>({});
     const [apiError, setApiError] = useState<string | null>(null);
+
+    const checkAuthentication = useCallback(async () => {
+        try {
+            const response = await getMe();
+            if (response.success) {
+                router.push("/");
+            }
+        } catch {
+        } finally {
+            setIsCheckingAuth(false);
+        }
+    }, [router]);
+
+    useEffect(() => {
+        checkAuthentication();
+    }, [checkAuthentication]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -95,6 +112,16 @@ function RegisterPageContent() {
             });
         }
     };
+
+    if (isCheckingAuth) {
+        return (
+            <AuthorizeLayout>
+                <div className="flex items-center justify-center py-12">
+                    <div className="text-white/60">Loading...</div>
+                </div>
+            </AuthorizeLayout>
+        );
+    }
 
     return (
         <AuthorizeLayout>
