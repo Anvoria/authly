@@ -55,7 +55,8 @@ type ServiceModel struct {
 }
 
 // NewService returns a ServiceInterface backed by the provided Repository and ServiceRepository.
-// repo provides data access for user permission records; serviceRepo resolves service metadata such as client_ids.
+// NewService creates a ServiceInterface backed by the provided Repository and ServiceRepository implementations.
+// The returned service implementation uses repo for user permission data access and serviceRepo to resolve service metadata such as client IDs.
 func NewService(repo Repository, serviceRepo ServiceRepository) ServiceInterface {
 	return &serviceImpl{
 		repo:        repo,

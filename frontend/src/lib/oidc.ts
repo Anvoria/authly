@@ -22,7 +22,15 @@ export interface ValidationResult {
 }
 
 /**
- * Validates OIDC authorization request parameters
+ * Validate OpenID Connect authorization request parameters from URL search params.
+ *
+ * Checks presence and basic validity of the required parameters: `client_id`, `redirect_uri`,
+ * `response_type`, `scope`, `state`, `code_challenge`, and `code_challenge_method`.
+ *
+ * @param searchParams - The URL search parameters containing the authorization request values
+ * @returns A ValidationResult where `valid` is `true` and `params` contains the parsed values
+ *          when all checks pass; otherwise `valid` is `false` and `error` contains `error`
+ *          and `error_description` explaining the failure.
  */
 export function validateAuthorizationParams(searchParams: ReadonlyURLSearchParams): ValidationResult {
     const clientId = searchParams.get("client_id");
@@ -150,7 +158,11 @@ export function validateAuthorizationParams(searchParams: ReadonlyURLSearchParam
 }
 
 /**
- * Builds error redirect URL with OIDC error parameters
+ * Construct a redirect URI that includes OIDC error parameters.
+ *
+ * @param redirectUri - The base redirect URI to append error parameters to.
+ * @param error - The OIDC error object containing `error`, `error_description`, and optional `state`.
+ * @returns The full redirect URI string with `error`, `error_description`, and optional `state` query parameters set.
  */
 export function buildErrorRedirect(redirectUri: string, error: ValidationError & { state?: string }): string {
     const url = new URL(redirectUri);
@@ -163,7 +175,12 @@ export function buildErrorRedirect(redirectUri: string, error: ValidationError &
 }
 
 /**
- * Builds success redirect URL with authorization code
+ * Constructs a redirect URL containing the authorization code and optional state.
+ *
+ * @param redirectUri - The destination redirect URI (must be a valid absolute URL) to which the parameters will be appended
+ * @param code - The authorization code to set as the `code` query parameter
+ * @param state - Optional `state` value to include as the `state` query parameter
+ * @returns The full redirect URI string with `code` and, if provided, `state` added as query parameters
  */
 export function buildSuccessRedirect(redirectUri: string, code: string, state?: string): string {
     const url = new URL(redirectUri);

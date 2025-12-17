@@ -12,7 +12,14 @@ import (
 
 // SessionMiddleware returns a Fiber middleware that authenticates requests using a session cookie.
 // It validates the session and attaches the resolved Identity to the request context.
-// This middleware is used for OIDC authorization flow where users are authenticated via session cookies.
+// SessionMiddleware returns a Fiber middleware that authenticates requests using a session cookie
+// and, when successful, attaches the resolved Identity and scopes to the request context.
+//
+// The middleware reads the "session" cookie expecting the format "sessionID:secret", validates the
+// session via the provided session service, builds permission scopes and version via the provided
+// permission service (defaulting to an empty scope map and permission version 1 on error), and
+// stores the resulting *auth.Identity and scopes map in the request locals under auth.IdentityKey
+// and auth.ScopesKey. If any step fails, the request proceeds without an authenticated identity.
 func SessionMiddleware(sessionService session.Service, permissionService permission.ServiceInterface) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// Get session cookie

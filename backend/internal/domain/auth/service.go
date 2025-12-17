@@ -92,7 +92,8 @@ func (s *Service) GenerateAccessToken(sub, sid string, scopes []string, audience
 }
 
 // filterAccessTokenScopes removes OIDC scopes that don't belong in access token
-// openid, profile, email are for ID token/userinfo, not access token
+// filterAccessTokenScopes filters out OIDC scopes that are intended for ID tokens or userinfo ("openid", "profile", "email") from the provided scope list.
+// It returns a new slice containing only the scopes appropriate for inclusion in an access token.
 func filterAccessTokenScopes(scopes []string) []string {
 	filtered := make([]string, 0, len(scopes))
 	for _, scope := range scopes {

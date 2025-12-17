@@ -7,6 +7,12 @@ export interface AuthorizeLayoutProps {
     children: React.ReactNode;
 }
 
+/**
+ * Layout wrapper for authorization screens that renders a centered, themed card with a header and body area.
+ *
+ * @param children - Content to render inside the layout's body area.
+ * @returns The layout element containing the header (logo and title) and the provided children
+ */
 export default function AuthorizeLayout({ children }: AuthorizeLayoutProps) {
     return (
         <div className="min-h-screen w-full flex items-center justify-center bg-black p-4">

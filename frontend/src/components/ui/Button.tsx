@@ -30,6 +30,19 @@ const sizeStyles: Record<ButtonSize, string> = {
     lg: "px-8 py-4 text-sm",
 };
 
+/**
+ * Renders a styled interactive element that is either a native button or a Next.js Link anchor, with configurable visual variant, size, icon placement, and width.
+ *
+ * @param variant - Visual style to apply: "primary" | "secondary" | "outline" | "ghost".
+ * @param size - Size preset to apply: "sm" | "md" | "lg".
+ * @param href - If provided, the component renders an anchor via Next.js Link pointing to this URL; otherwise it renders a native `<button>`.
+ * @param icon - Optional element displayed alongside the label.
+ * @param iconPosition - Position of the `icon` relative to the label: "left" or "right".
+ * @param fullWidth - When true, the element stretches to fill its container's width.
+ * @param className - Additional CSS class names appended to the computed styles.
+ * @param children - Visible label/content of the button.
+ * @returns The rendered anchor element when `href` is provided, otherwise a `<button>` element.
+ */
 export default function Button({
     variant = "primary",
     size = "md",
