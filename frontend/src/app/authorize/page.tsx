@@ -15,6 +15,16 @@ interface ErrorState {
     redirect?: string;
 }
 
+/**
+ * Render the authorization consent flow UI for an incoming OIDC authorization request.
+ *
+ * Validates the incoming request and client, checks requested scopes and authentication status,
+ * and presents one of three UI states: validating, an error page with optional redirect, or a consent
+ * screen. If the user is not authenticated, navigates to the login page with encoded OIDC parameters.
+ * On approval or denial, builds the appropriate redirect (authorization code or error) and navigates there.
+ *
+ * @returns A JSX element representing the current authorization UI state (validating, error, or consent), or `null` when no UI should be rendered.
+ */
 function AuthorizePageContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -264,6 +274,11 @@ function AuthorizePageContent() {
     return null;
 }
 
+/**
+ * Render the authorization page wrapped in a Suspense boundary with a loading fallback.
+ *
+ * @returns The authorization page element, showing a centered loading fallback until content is ready.
+ */
 export default function AuthorizePage() {
     return (
         <Suspense

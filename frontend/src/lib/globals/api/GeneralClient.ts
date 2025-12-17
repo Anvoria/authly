@@ -19,21 +19,32 @@ export interface GetOptions {
 }
 
 /**
- * Checks if response is a SuccessResponse format
+ * Determines whether a backend response matches the SuccessResponse shape.
+ *
+ * @param data - The backend response to check
+ * @returns `true` if `data` is a `SuccessResponse` (has `success === true`), `false` otherwise
  */
 function isSuccessResponse<T>(data: BackendResponse<T>): data is SuccessResponse<T> {
     return typeof data === "object" && data !== null && "success" in data && data.success === true;
 }
 
 /**
- * Checks if response is an ErrorResponse format
+ * Determines whether a value matches the ErrorResponse shape.
+ *
+ * @param data - The value to test
+ * @returns `true` if `data` is an object with `success === false` and an `error` field, `false` otherwise.
  */
 function isErrorResponse(data: unknown): data is ErrorResponse {
     return typeof data === "object" && data !== null && "success" in data && data.success === false && "error" in data;
 }
 
 /**
- * Checks if response is an OIDCErrorResponse format
+ * Determines whether a value matches the OIDC error response shape.
+ *
+ * Recognizes objects that contain an `error` property of type `string` and do not include a `success` property.
+ *
+ * @param data - The value to test
+ * @returns `true` if `data` conforms to `OIDCErrorResponse`, `false` otherwise.
  */
 function isOIDCErrorResponse(data: unknown): data is OIDCErrorResponse {
     return (
@@ -46,7 +57,10 @@ function isOIDCErrorResponse(data: unknown): data is OIDCErrorResponse {
 }
 
 /**
- * Parses backend response and extracts data or error
+ * Normalize various backend response shapes into a consistent result carrying either data or error details.
+ *
+ * @param response - Axios response containing the backend payload to parse
+ * @returns An object with `success: true` and `data` (and optional `message`) when the backend indicates success; otherwise `success: false` with `error` and optional `errorDescription` and `errorUri`
  */
 function parseBackendResponse<D>(response: AxiosResponse<BackendResponse<D>>): {
     success: boolean;

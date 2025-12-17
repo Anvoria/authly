@@ -57,7 +57,8 @@ type Service struct {
 	userService       user.Service
 }
 
-// NewService creates a new OIDC service
+// NewService creates a new ServiceInterface wired with the provided repositories and supporting services.
+// The returned Service is configured with a 10-minute authorization code lifetime.
 func NewService(serviceRepo svc.Repository, codeRepo Repository, authService *auth.Service, sessionService session.Service, permissionService permission.ServiceInterface, userService user.Service) ServiceInterface {
 	return &Service{
 		serviceRepo:       serviceRepo,

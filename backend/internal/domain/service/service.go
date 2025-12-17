@@ -34,7 +34,8 @@ type serviceImpl struct {
 }
 
 // NewService creates a ServiceInterface that uses the provided repository and optional cache invalidator.
-// If `cache` is nil, cache invalidation is disabled for the returned service.
+// NewService constructs a ServiceInterface that uses the provided repository and optional cache invalidator.
+// If cache is nil, cache invalidation is disabled for the returned service.
 func NewService(repo Repository, cache CacheInvalidator) ServiceInterface {
 	return &serviceImpl{repo: repo, cache: cache}
 }
@@ -179,10 +180,14 @@ func (s *serviceImpl) Delete(id string) error {
 	return s.repo.Delete(id)
 }
 
+// GenerateClientID produces a client identifier in the form "authly_<slug>_<8hex>".
+// The final segment is the first eight hexadecimal characters of a newly generated UUID.
 func GenerateClientID(slug string) string {
 	return fmt.Sprintf("authly_%s_%s", slug, uuid.New().String()[:8])
 }
 
+// GenerateClientSecret produces a 32-character secret suitable for use as an OAuth client secret.
+// The secret is a standard base64 (A–Z, a–z, 0–9, +, /) representation derived from a UUID, trimmed to 32 characters with no padding.
 func GenerateClientSecret() string {
 	return base64.RawStdEncoding.EncodeToString([]byte(uuid.New().String()))[:32]
 }

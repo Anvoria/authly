@@ -8,6 +8,11 @@ import Button from "@/authly/components/ui/Button";
 import { register, getMe, type ApiError } from "@/authly/lib/api";
 import { registerFormSchema, registerRequestSchema, type RegisterFormData } from "@/authly/lib/schemas/auth/register";
 
+/**
+ * Renders the registration page UI and manages the full registration flow: checks current authentication and redirects if already authenticated, validates form input, submits registration requests, preserves and forwards `oidc_params` when present, and surfaces field and API errors.
+ *
+ * @returns The JSX element for the register page content.
+ */
 function RegisterPageContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -222,6 +227,11 @@ function RegisterPageContent() {
     );
 }
 
+/**
+ * Renders the registration page content inside a Suspense boundary with a centered loading fallback.
+ *
+ * @returns A JSX element containing <RegisterPageContent /> wrapped in React.Suspense and a full-screen loading indicator.
+ */
 export default function RegisterPage() {
     return (
         <Suspense

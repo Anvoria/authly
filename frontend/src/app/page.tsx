@@ -1,5 +1,14 @@
 import Image from "next/image";
 
+/**
+ * Render the landing page layout with logos, introductory text, and action links.
+ *
+ * The layout fills the viewport, centers content, and applies light/dark theme styles.
+ * Includes the Next.js logo, a heading and supporting paragraph with links to Templates and Learning,
+ * and two call-to-action buttons for "Deploy Now" and "Documentation".
+ *
+ * @returns The React element representing the landing page UI
+ */
 export default function Home() {
     return (
         <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">

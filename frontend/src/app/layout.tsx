@@ -35,6 +35,12 @@ export const viewport: Viewport = {
     themeColor: "#000000",
 };
 
+/**
+ * Root layout for the application that applies global font variables and wraps page content.
+ *
+ * @param children - The application content to render inside the layout.
+ * @returns The root HTML structure (`<html>` and `<body>`) containing `children`.
+ */
 export default function RootLayout({ children }: { children: React.ReactNode }) {
     return (
         <html lang="en" suppressHydrationWarning className={`${sora.variable} ${mono.variable}`}>

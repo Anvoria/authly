@@ -11,6 +11,17 @@ export interface ConsentScreenProps {
     isLoading?: boolean;
 }
 
+/**
+ * Render an OAuth consent screen prompting the user to approve or deny an application's requested scopes.
+ *
+ * @param clientName - Application display name shown in the title and description
+ * @param clientLogoUrl - Optional URL of the application's logo; rendered when provided
+ * @param scopes - Array of requested scope strings; common scopes are shown with human-readable descriptions
+ * @param onApprove - Callback invoked when the user approves the request
+ * @param onDeny - Callback invoked when the user denies the request
+ * @param isLoading - When true, disables actions and replaces the approve label with "Authorizing..."
+ * @returns A React element representing the consent UI
+ */
 export default function ConsentScreen({
     clientName,
     clientLogoUrl,

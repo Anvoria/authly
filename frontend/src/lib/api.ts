@@ -20,6 +20,12 @@ import type { ReadonlyURLSearchParams } from "next/navigation";
 
 export type { ApiError };
 
+/**
+ * Authenticate a user with the provided login credentials and return a validated login response.
+ *
+ * @param data - The login credentials to submit (e.g., username/email and password)
+ * @returns A `LoginResponse` describing the operation result. On success it contains `data` with the authenticated user's information and an optional `message`. On failure it contains an `error` code such as `"redirect_occurred"`, a server-provided error, or `"unknown_error"`.
+ */
 export async function login(data: LoginRequest): Promise<LoginResponse> {
     const validatedData = loginRequestSchema.parse(data);
 
@@ -67,6 +73,12 @@ export async function login(data: LoginRequest): Promise<LoginResponse> {
     return loginResponseSchema.parse(successResponse);
 }
 
+/**
+ * Create a new user account with the provided registration data.
+ *
+ * @param data - Registration details to validate and send to the backend
+ * @returns A `RegisterResponse`: `success: true` includes `data` and optional `message`; `success: false` includes an `error` code (`redirect_occurred`, a server-provided error, or `unknown_error`)
+ */
 export async function register(data: RegisterRequest): Promise<RegisterResponse> {
     const validatedData = registerRequestSchema.parse(data);
 
@@ -103,6 +115,11 @@ export async function register(data: RegisterRequest): Promise<RegisterResponse>
     return registerResponseSchema.parse(successResponse);
 }
 
+/**
+ * Fetches the current authenticated user's profile from the backend and returns a validated response.
+ *
+ * @returns A `MeResponse` containing the user's profile under `data` when successful; otherwise a `MeResponse` with `success: false` and an `error` string describing the failure—either `redirect_occurred`, the backend-provided error, or `unknown_error`.
+ */
 export async function getMe(): Promise<MeResponse> {
     const response = await GeneralClient.get<{
         user: {
@@ -148,6 +165,12 @@ export async function getMe(): Promise<MeResponse> {
     return meResponseSchema.parse(successResponse);
 }
 
+/**
+ * Validates an OAuth2/OIDC authorization request represented by URL search parameters.
+ *
+ * @param searchParams - The query parameters from the authorization request (e.g., from window.location.search)
+ * @returns The parsed validation result indicating whether the request is valid and, on failure, an error and description
+ */
 export async function validateAuthorizationRequest(
     searchParams: ReadonlyURLSearchParams,
 ): Promise<ValidateAuthorizationRequestResponse> {
@@ -167,6 +190,11 @@ export async function validateAuthorizationRequest(
     return validateAuthorizationRequestResponseSchema.parse(response.data);
 }
 
+/**
+ * Determine whether a user is currently authenticated and, if so, provide their user ID.
+ *
+ * @returns `{ authenticated: true, user_id: string }` when authenticated; `{ authenticated: false }` otherwise.
+ */
 export async function checkAuthStatus(): Promise<{ authenticated: boolean; user_id?: string }> {
     try {
         const response = await getMe();
@@ -182,6 +210,13 @@ export async function checkAuthStatus(): Promise<{ authenticated: boolean; user_
     }
 }
 
+/**
+ * Confirms an OAuth authorization decision with the backend and returns the validated authorization response.
+ *
+ * @param request - The authorization confirmation payload (validated against `confirmAuthorizationRequestSchema`)
+ * @returns A `ConfirmAuthorizationResponse` parsed and validated by `confirmAuthorizationResponseSchema`. On failure the response contains `success: false` and `error`/`error_description`; on success it contains the backend-provided authorization data (including `redirect_uri` when applicable).
+ * @throws Error if the backend indicates success but does not provide a `redirect_uri`
+ */
 export async function confirmAuthorization(
     request: ConfirmAuthorizationRequest,
 ): Promise<ConfirmAuthorizationResponse> {

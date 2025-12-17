@@ -25,7 +25,9 @@ import (
 // It mounts the API under "/v1", registers authentication endpoints under "/v1/auth" (POST /login, POST /register),
 // exposes the JWKS at "/.well-known/jwks.json", and protects GET "/v1/user/info" with authentication middleware.
 // The function loads cryptographic keys from cfg.Auth.KeysPath and requires the configured active KID to be present;
-// it returns an error if keys cannot be loaded or the active key is not found.
+// SetupRoutes configures all HTTP routes, repositories, caches, services, authentication, and OpenID Connect endpoints on the provided Fiber app.
+// It initializes repositories (user, session, service, permission), caches, core services, key store, authentication and OIDC services and handlers, then registers routes under /v1 (including /auth, /oauth and well-known endpoints).
+// Returns an error if cryptographic keys cannot be loaded or the configured active key is not found.
 func SetupRoutes(app *fiber.App, envConfig *config.Environment, cfg *config.Config) error {
 	api := app.Group("/v1")
 

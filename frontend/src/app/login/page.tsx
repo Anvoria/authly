@@ -13,6 +13,13 @@ type LoginFormData = {
     password: string;
 };
 
+/**
+ * Renders the login form, performs an initial authentication check, and handles credential submission with validation and redirects.
+ *
+ * Validates user input, calls the login API, displays field-level and global errors, and redirects on successful authentication — preserving `oidc_params` to the authorize flow when present. While verifying existing authentication on mount, shows a centered loading state.
+ *
+ * @returns The login page UI as a React element, including inputs for username and password, error display, and navigation links.
+ */
 function LoginPageContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -178,6 +185,11 @@ function LoginPageContent() {
     );
 }
 
+/**
+ * Client-side login page wrapped in a Suspense boundary that shows a full-screen loading fallback.
+ *
+ * @returns A JSX element that renders the login page content and displays a centered "Loading..." indicator while suspended.
+ */
 export default function LoginPage() {
     return (
         <Suspense

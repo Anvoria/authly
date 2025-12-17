@@ -12,7 +12,8 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 )
 
-// Start initializes and starts the HTTP server
+// Start initializes logging, configures the Fiber app (including CORS), connects to the database and Redis, runs migrations, loads environment configuration, registers routes, and starts listening on the configured address.
+// It returns an error if any startup step fails.
 func Start(cfg *config.Config) error {
 	initLogger(cfg.Logging.Level)
 

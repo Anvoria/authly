@@ -40,7 +40,7 @@ type ServiceInfo interface {
 // solely on the cryptographically signed token claims and does not rely on client-controlled
 // headers like Origin or Referer, which can be spoofed. On successful validation the middleware
 // stores the Identity under IdentityKey and the scopes map under ScopesKey in the Fiber context
-// before calling the next handler.
+// For malformed/missing headers, invalid or expired tokens, missing/invalid audience, revoked tokens, or failed service lookups the middleware responds with appropriate HTTP error statuses; an error during the revocation check results in an internal server error.
 func AuthMiddleware(keyStore *KeyStore, svc AuthService, issuer string, serviceRepo ServiceRepository) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		authHeader := c.Get("Authorization")
@@ -134,7 +134,8 @@ func AuthMiddleware(keyStore *KeyStore, svc AuthService, issuer string, serviceR
 }
 
 // RequirePermission returns a middleware that requires the specified permission scope to have a non-zero bitmask.
-// The middleware responds with HTTP 403 Forbidden if permissions are missing, the scope is absent, or its bitmask is zero.
+// RequirePermission returns a middleware that enforces the presence of a non-zero permission bitmask for the given scope.
+// It sends HTTP 403 Forbidden if the permissions map is missing or not a map[string]uint64, if the scope is absent, or if its bitmask is zero.
 func RequirePermission(requiredScope string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		permissions, ok := c.Locals(ScopesKey).(map[string]uint64)
@@ -151,7 +152,8 @@ func RequirePermission(requiredScope string) fiber.Handler {
 	}
 }
 
-// RequireScope is deprecated - use RequirePermission instead
+// RequireScope is deprecated; use RequirePermission instead.
+// Deprecated: this function delegates to RequirePermission(requiredScope) and will be removed in a future release.
 func RequireScope(requiredScope string) fiber.Handler {
 	return RequirePermission(requiredScope)
 }
@@ -161,7 +163,13 @@ func RequireScope(requiredScope string) fiber.Handler {
 // The middleware checks the request's permissions (stored under ScopesKey in the context) and responds with HTTP 403 Forbidden if:
 // - the permissions map is missing or invalid,
 // - the required scope is not present or has a zero bitmask,
-// - the required permission bit is not set in the scope's bitmask.
+// RequirePermissionBit is a Fiber middleware that requires the specified bit within the named permission scope
+// to be set in the request's permissions map stored under ScopesKey.
+// If the permissions map is missing or has the wrong type, it responds with 403 Forbidden.
+// If requiredBit is not in the range 0–63 it logs an error and responds with 403 Forbidden.
+// If the named scope is absent or its bitmask is zero, it responds with 403 Forbidden.
+// If the specific bit is not set in the scope's bitmask, it responds with 403 Forbidden.
+// On success the middleware calls the next handler in the chain.
 func RequirePermissionBit(requiredScope string, requiredBit uint8) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		permissions, ok := c.Locals(ScopesKey).(map[string]uint64)

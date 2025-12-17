@@ -13,14 +13,17 @@ type Handler struct {
 	service ServiceInterface
 }
 
-// NewHandler creates a new OIDC handler
+// NewHandler creates a Handler that serves OIDC HTTP endpoints backed by the provided service.
+// The returned Handler delegates OIDC operations to the given ServiceInterface.
 func NewHandler(service ServiceInterface) *Handler {
 	return &Handler{
 		service: service,
 	}
 }
 
-// OpenIDConfigurationHandler returns the OpenID Connect configuration
+// OpenIDConfigurationHandler returns an HTTP handler that serves the OpenID Connect discovery document for the provided domain.
+// The handler responds with a JSON object containing the issuer, authorization/token/userinfo/jwks endpoints, supported scopes,
+// supported response and grant types, subject types, and supported ID token signing algorithms.
 func OpenIDConfigurationHandler(domain string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
