@@ -3,6 +3,7 @@ package session
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -32,6 +33,7 @@ type Service interface {
 	Validate(sessionID uuid.UUID, secret string) (*Session, error)
 	Rotate(sessionID uuid.UUID, oldSecret string, ttl time.Duration) (newSecret string, err error)
 	Revoke(sessionID uuid.UUID) error
+	RevokeAllUserSessions(userID uuid.UUID) error
 	Exists(sessionID uuid.UUID) (bool, error)
 }
 
@@ -173,6 +175,22 @@ func (s *service) Revoke(id uuid.UUID) error {
 		}
 		if err := s.revocationCache.RevokeSession(ctx, id.String(), ttl); err != nil {
 			slog.Warn("Failed to store session revocation in Redis", "error", err, "session_id", id.String())
+		}
+	}
+
+	return nil
+}
+
+// RevokeAllUserSessions revokes all sessions for a specific user
+func (s *service) RevokeAllUserSessions(userID uuid.UUID) error {
+	sessions, err := s.repo.FindSessionsByUserID(userID)
+	if err != nil {
+		return fmt.Errorf("failed to get sessions for user %s: %w", userID, err)
+	}
+
+	for _, sess := range sessions {
+		if err := s.Revoke(sess.ID); err != nil {
+			slog.Warn("Failed to revoke session", "error", err, "session_id", sess.ID.String(), "user_id", userID.String())
 		}
 	}
 

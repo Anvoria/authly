@@ -46,23 +46,3 @@ func (c *TokenRevocationCache) RevokeSession(ctx context.Context, sessionID stri
 	cacheKey := SessionRevocationPrefix + sessionID
 	return RedisClient.Set(ctx, cacheKey, "1", ttl).Err()
 }
-
-// RevokeAllUserSessions revokes all sessions for a user
-// This is useful for logout-all or security events
-func (c *TokenRevocationCache) RevokeAllUserSessions(ctx context.Context, userID string) error {
-	if RedisClient == nil {
-		return fmt.Errorf("redis client not initialized")
-	}
-
-	pattern := SessionRevocationPrefix + "*"
-	keys, err := RedisClient.Keys(ctx, pattern).Result()
-	if err != nil {
-		return fmt.Errorf("failed to get session keys: %w", err)
-	}
-
-	if len(keys) > 0 {
-		return RedisClient.Del(ctx, keys...).Err()
-	}
-
-	return nil
-}

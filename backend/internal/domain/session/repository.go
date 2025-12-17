@@ -14,6 +14,7 @@ type Repository interface {
 	UpdateHash(id uuid.UUID, oldHash, newHash string, newExpiry time.Time) (bool, error)
 	Revoke(id uuid.UUID) error
 	UpdateLastUsed(id uuid.UUID, t time.Time) error
+	FindSessionsByUserID(userID uuid.UUID) ([]Session, error)
 }
 
 type repository struct {
@@ -72,4 +73,13 @@ func (r *repository) UpdateLastUsed(id uuid.UUID, t time.Time) error {
 	return r.db.Model(&Session{}).
 		Where("id = ? AND revoked = false", id).
 		Update("last_used_at", t).Error
+}
+
+func (r *repository) FindSessionsByUserID(userID uuid.UUID) ([]Session, error) {
+	var sessions []Session
+	err := r.db.Where("user_id = ? AND revoked = false", userID.String()).Find(&sessions).Error
+	if err != nil {
+		return nil, err
+	}
+	return sessions, nil
 }
