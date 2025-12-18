@@ -44,7 +44,6 @@ func OpenIDConfigurationHandler(domain string) fiber.Handler {
 			"response_types_supported": []string{"code"},
 			"grant_types_supported": []string{
 				"authorization_code",
-				"refresh_token",
 			},
 
 			"subject_types_supported":               []string{"public"},
