@@ -53,21 +53,10 @@ function AuthorizePageContent() {
             const validation = validateAuthorizationParams(searchParams);
 
             if (!validation.valid) {
-                const redirectUri = searchParams.get("redirect_uri");
-                let errorRedirect: string | undefined;
-
-                if (redirectUri) {
-                    try {
-                        errorRedirect = buildErrorRedirect(redirectUri, validation.error!);
-                    } catch {
-                        errorRedirect = undefined;
-                    }
-                }
-
                 setError({
                     title: "Invalid Request",
                     message: validation.error!.error_description,
-                    redirect: errorRedirect,
+                    redirect: undefined,
                 });
                 setStep("error");
                 return;
@@ -78,15 +67,10 @@ function AuthorizePageContent() {
             const clientValidation = await validateAuthorizationRequest(searchParams);
 
             if (!clientValidation.valid || !clientValidation.client) {
-                const errorRedirect = buildErrorRedirect(params.redirect_uri, {
-                    error: clientValidation.error || "invalid_client",
-                    error_description: clientValidation.error_description || "Invalid or inactive client",
-                    state: params.state,
-                });
                 setError({
                     title: "Invalid Client",
                     message: clientValidation.error_description || "The client application is invalid or inactive",
-                    redirect: errorRedirect,
+                    redirect: undefined,
                 });
                 setStep("error");
                 return;
