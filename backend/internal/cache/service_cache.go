@@ -124,9 +124,19 @@ func (c *ServiceCache) InvalidateByDomain(ctx context.Context, domain string) er
 		return nil
 	}
 
-	err := RedisClient.Del(ctx, cacheKey).Err()
+	// Try to get service to find client_id for complete invalidation
+	// We ignore error here because even if we fail to find the service/client_id,
+	// we still want to at least invalidate the domain key
+	svc, _ := c.GetByDomain(ctx, domain)
+
+	keys := []string{cacheKey}
+	if svc != nil && svc.ClientID != "" {
+		keys = append(keys, ServiceCacheClientIDPrefix+svc.ClientID)
+	}
+
+	err := RedisClient.Del(ctx, keys...).Err()
 	if err == nil {
-		slog.Debug("Service cache invalidated in Redis", "domain", domain, "key", cacheKey)
+		slog.Debug("Service cache invalidated in Redis", "domain", domain, "keys", keys)
 	}
 	return err
 }
