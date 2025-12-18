@@ -44,15 +44,15 @@ function LoginPageContent() {
                     try {
                         const decoded = decodeURIComponent(oidcParams);
                         const params = new URLSearchParams(decoded);
-                        
+
                         // Check if PKCE parameters are missing and add them if needed
                         if (!params.has("code_challenge")) {
                             const verifier = generateCodeVerifier();
                             const challenge = await generateCodeChallenge(verifier);
-                            
+
                             params.set("code_challenge", challenge);
                             params.set("code_challenge_method", "S256");
-                            
+
                             localStorage.setItem("oidc_code_verifier", verifier);
                         }
 
@@ -117,14 +117,14 @@ function LoginPageContent() {
                     try {
                         const decoded = decodeURIComponent(oidcParams);
                         const params = new URLSearchParams(decoded);
-                        
+
                         if (!params.has("code_challenge")) {
                             const verifier = generateCodeVerifier();
                             const challenge = await generateCodeChallenge(verifier);
-                            
+
                             params.set("code_challenge", challenge);
                             params.set("code_challenge_method", "S256");
-                            
+
                             localStorage.setItem("oidc_code_verifier", verifier);
                         }
 

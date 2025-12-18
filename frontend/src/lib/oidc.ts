@@ -212,7 +212,7 @@ export async function generateCodeChallenge(codeVerifier: string): Promise<strin
     const encoder = new TextEncoder();
     const data = encoder.encode(codeVerifier);
     const hash = await crypto.subtle.digest("SHA-256", data);
-    
+
     // Convert buffer to Base64URL
     return btoa(String.fromCharCode(...new Uint8Array(hash)))
         .replace(/\+/g, "-")

@@ -280,25 +280,25 @@ export async function exchangeToken(request: TokenRequest): Promise<TokenRespons
 
     if (!response.success) {
         if ("isRedirect" in response && response.isRedirect) {
-             return {
-                 error: "server_error",
-                 error_description: "Unexpected redirect from token endpoint"
-             };
+            return {
+                error: "server_error",
+                error_description: "Unexpected redirect from token endpoint",
+            };
         }
-        
+
         if ("error" in response) {
-             return {
-                 error: response.error,
-                 error_description: response.errorDescription
-             };
+            return {
+                error: response.error,
+                error_description: response.errorDescription,
+            };
         }
-        
+
         return {
-             error: "unknown_error",
-             error_description: "An unexpected error occurred"
+            error: "unknown_error",
+            error_description: "An unexpected error occurred",
         };
     }
-    
+
     const result = tokenResponseSchema.parse(response.data);
     return result;
 }
