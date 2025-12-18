@@ -35,4 +35,6 @@ tmp/
 bin/
 
 # keys
-/keys/
+/backend/keys/
+
+.DS_Store
