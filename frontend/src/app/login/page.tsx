@@ -7,6 +7,7 @@ import Input from "@/authly/components/ui/Input";
 import Button from "@/authly/components/ui/Button";
 import { login, getMe, type ApiError } from "@/authly/lib/api";
 import { loginRequestSchema, type LoginRequest } from "@/authly/lib/schemas/auth/login";
+import { generateCodeVerifier, generateCodeChallenge } from "@/authly/lib/oidc";
 
 type LoginFormData = {
     username: string;
@@ -36,6 +37,38 @@ function LoginPageContent() {
         try {
             const response = await getMe();
             if (response.success) {
+                // User is already authenticated.
+                // If oidc_params are present, immediately redirect to authorize flow logic
+                const oidcParams = searchParams.get("oidc_params");
+                if (oidcParams) {
+                    try {
+                        const decoded = decodeURIComponent(oidcParams);
+                        const params = new URLSearchParams(decoded);
+                        
+                        // Check if PKCE parameters are missing and add them if needed
+                        if (!params.has("code_challenge")) {
+                            const verifier = generateCodeVerifier();
+                            const challenge = await generateCodeChallenge(verifier);
+                            
+                            params.set("code_challenge", challenge);
+                            params.set("code_challenge_method", "S256");
+                            
+                            localStorage.setItem("oidc_code_verifier", verifier);
+                        }
+
+                        const authorizeUrl = new URL("/authorize", window.location.origin);
+                        params.forEach((value, key) => {
+                            authorizeUrl.searchParams.set(key, value);
+                        });
+                        router.push(authorizeUrl.toString());
+                        return;
+                    } catch {
+                        router.push("/authorize?" + oidcParams);
+                        return;
+                    }
+                }
+
+                // Normal login flow - redirect to dashboard
                 router.push("/");
             }
         } catch {
@@ -43,7 +76,7 @@ function LoginPageContent() {
         } finally {
             setIsCheckingAuth(false);
         }
-    }, [router]);
+    }, [router, searchParams]);
 
     useEffect(() => {
         checkAuthentication();
@@ -84,6 +117,17 @@ function LoginPageContent() {
                     try {
                         const decoded = decodeURIComponent(oidcParams);
                         const params = new URLSearchParams(decoded);
+                        
+                        if (!params.has("code_challenge")) {
+                            const verifier = generateCodeVerifier();
+                            const challenge = await generateCodeChallenge(verifier);
+                            
+                            params.set("code_challenge", challenge);
+                            params.set("code_challenge_method", "S256");
+                            
+                            localStorage.setItem("oidc_code_verifier", verifier);
+                        }
+
                         const authorizeUrl = new URL("/authorize", window.location.origin);
                         params.forEach((value, key) => {
                             authorizeUrl.searchParams.set(key, value);

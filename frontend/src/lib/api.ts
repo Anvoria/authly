@@ -14,6 +14,10 @@ import {
     type ValidateAuthorizationRequestResponse,
     type ConfirmAuthorizationRequest,
     type ConfirmAuthorizationResponse,
+    type TokenRequest,
+    type TokenResponse,
+    tokenRequestSchema,
+    tokenResponseSchema,
 } from "./schemas/oidc";
 import type { ApiError } from "./schemas/auth/login";
 import type { ReadonlyURLSearchParams } from "next/navigation";
@@ -255,4 +259,46 @@ export async function confirmAuthorization(
     }
 
     return validated;
+}
+
+export async function exchangeToken(request: TokenRequest): Promise<TokenResponse> {
+    const validatedData = tokenRequestSchema.parse(request);
+
+    const formData = new URLSearchParams();
+    for (const key in validatedData) {
+        const value = validatedData[key as keyof typeof validatedData];
+        if (value !== undefined && value !== null) {
+            formData.append(key, String(value));
+        }
+    }
+
+    const response = await GeneralClient.post<TokenResponse>("/oauth/token", formData.toString(), {
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+    });
+
+    if (!response.success) {
+        if ("isRedirect" in response && response.isRedirect) {
+             return {
+                 error: "server_error",
+                 error_description: "Unexpected redirect from token endpoint"
+             };
+        }
+        
+        if ("error" in response) {
+             return {
+                 error: response.error,
+                 error_description: response.errorDescription
+             };
+        }
+        
+        return {
+             error: "unknown_error",
+             error_description: "An unexpected error occurred"
+        };
+    }
+    
+    const result = tokenResponseSchema.parse(response.data);
+    return result;
 }
