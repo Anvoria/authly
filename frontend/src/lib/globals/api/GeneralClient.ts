@@ -133,6 +133,7 @@ export abstract class BaseClient {
 
     protected static cache = new Map<string, CacheEntry<unknown>>();
     protected static defaultTTL = 5 * 60 * 1000;
+    protected static maxCacheSize = 100;
 
     private static generateCacheKey(url: string, config?: AxiosRequestConfig): string {
         const configKey = config
@@ -147,6 +148,21 @@ export abstract class BaseClient {
     private static isCacheValid(entry: CacheEntry<unknown>): boolean {
         if (!entry.ttl) return true;
         return Date.now() - entry.timestamp < entry.ttl;
+    }
+
+    private static evictOldest(): void {
+        if (BaseClient.cache.size >= BaseClient.maxCacheSize) {
+            const oldestKey = BaseClient.cache.keys().next().value;
+            if (oldestKey) BaseClient.cache.delete(oldestKey);
+        }
+    }
+
+    private static pruneExpired(): void {
+        for (const [key, entry] of BaseClient.cache.entries()) {
+            if (!BaseClient.isCacheValid(entry)) {
+                BaseClient.cache.delete(key);
+            }
+        }
     }
 
     public static clearCache(url?: string): void {
@@ -171,8 +187,12 @@ export abstract class BaseClient {
 
         if (useCache) {
             const cached = BaseClient.cache.get(cacheKey);
-            if (cached && BaseClient.isCacheValid(cached)) {
-                return cached.data as IRequestResponsePayload<D, E>;
+            if (cached) {
+                if (BaseClient.isCacheValid(cached)) {
+                    return cached.data as IRequestResponsePayload<D, E>;
+                } else {
+                    BaseClient.cache.delete(cacheKey);
+                }
             }
         }
 
@@ -200,6 +220,8 @@ export abstract class BaseClient {
                 };
 
                 if (useCache) {
+                    BaseClient.pruneExpired();
+                    BaseClient.evictOldest();
                     BaseClient.cache.set(cacheKey, {
                         data: response,
                         timestamp: Date.now(),
