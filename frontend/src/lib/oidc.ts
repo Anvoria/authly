@@ -126,7 +126,7 @@ export function validateAuthorizationParams(searchParams: ReadonlyURLSearchParam
             valid: false,
             error: {
                 error: "invalid_request",
-                error_description: `Unsupported code_challenge_method: ${codeChallengeMethod}. Only 'S256' and 'plain' are supported.`,
+                error_description: `Unsupported code_challenge_method: ${codeChallengeMethod}. Only 's256' and 'plain' are supported.`,
             },
         };
     }
