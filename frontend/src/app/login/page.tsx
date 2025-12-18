@@ -8,6 +8,7 @@ import Button from "@/authly/components/ui/Button";
 import { login, getMe, isApiError } from "@/authly/lib/api";
 import { loginRequestSchema, type LoginRequest } from "@/authly/lib/schemas/auth/login";
 import { generateCodeVerifier, generateCodeChallenge, redirectToAuthorize } from "@/authly/lib/oidc";
+import LocalStorageTokenService from "@/authly/lib/globals/client/LocalStorageTokenService";
 
 type LoginFormData = {
     username: string;
@@ -53,7 +54,7 @@ function LoginPageContent() {
                             params.set("code_challenge", challenge);
                             params.set("code_challenge_method", "S256");
 
-                            localStorage.setItem("oidc_code_verifier", verifier);
+                            LocalStorageTokenService.setOidcCodeVerifier(verifier);
                         }
 
                         const authorizeUrl = new URL("/authorize", window.location.origin);
