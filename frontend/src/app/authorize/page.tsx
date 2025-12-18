@@ -95,15 +95,10 @@ function AuthorizePageContent() {
             const client = clientValidation.client;
 
             if (!client.redirect_uris.includes(params.redirect_uri)) {
-                const errorRedirect = buildErrorRedirect(params.redirect_uri, {
-                    error: "invalid_request",
-                    error_description: "redirect_uri is not registered for this client",
-                    state: params.state,
-                });
                 setError({
                     title: "Invalid Redirect URI",
                     message: "The redirect URI is not registered for this application",
-                    redirect: errorRedirect,
+                    redirect: undefined,
                 });
                 setStep("error");
                 return;
