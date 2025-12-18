@@ -3,7 +3,6 @@ package cache
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -39,20 +38,20 @@ func NewServiceCache(repo service.Repository) *ServiceCache {
 func (c *ServiceCache) GetByDomain(ctx context.Context, domain string) (*service.Service, error) {
 	cacheKey := ServiceCachePrefix + domain
 
-	if RedisClient == nil {
-		return nil, fmt.Errorf("redis client not initialized")
-	}
-
-	// Try to get from Redis cache
-	cached, err := RedisClient.Get(ctx, cacheKey).Result()
-	if err == nil {
-		var svc service.Service
-		if err := json.Unmarshal([]byte(cached), &svc); err == nil {
-			if svc.ID != uuid.Nil {
-				slog.Debug("Service cache hit from Redis", "domain", domain, "key", cacheKey)
-				return &svc, nil
+	if RedisClient != nil {
+		// Try to get from Redis cache
+		cached, err := RedisClient.Get(ctx, cacheKey).Result()
+		if err == nil {
+			var svc service.Service
+			if err := json.Unmarshal([]byte(cached), &svc); err == nil {
+				if svc.ID != uuid.Nil {
+					slog.Debug("Service cache hit from Redis", "domain", domain, "key", cacheKey)
+					return &svc, nil
+				}
 			}
 		}
+	} else {
+		slog.Warn("Redis client not initialized, skipping cache", "domain", domain)
 	}
 
 	slog.Debug("Service cache miss, fetching from database", "domain", domain)
@@ -62,12 +61,14 @@ func (c *ServiceCache) GetByDomain(ctx context.Context, domain string) (*service
 		return nil, err
 	}
 
-	data, err := json.Marshal(svc)
-	if err == nil {
-		if err := RedisClient.Set(ctx, cacheKey, data, ServiceCacheTTL).Err(); err != nil {
-			slog.Warn("Failed to store service in Redis cache", "domain", domain, "error", err)
-		} else {
-			slog.Debug("Service cached in Redis", "domain", domain, "key", cacheKey, "ttl", ServiceCacheTTL)
+	if RedisClient != nil {
+		data, err := json.Marshal(svc)
+		if err == nil {
+			if err := RedisClient.Set(ctx, cacheKey, data, ServiceCacheTTL).Err(); err != nil {
+				slog.Warn("Failed to store service in Redis cache", "domain", domain, "error", err)
+			} else {
+				slog.Debug("Service cached in Redis", "domain", domain, "key", cacheKey, "ttl", ServiceCacheTTL)
+			}
 		}
 	}
 
@@ -78,20 +79,19 @@ func (c *ServiceCache) GetByDomain(ctx context.Context, domain string) (*service
 func (c *ServiceCache) GetByClientID(ctx context.Context, clientID string) (*service.Service, error) {
 	cacheKey := ServiceCacheClientIDPrefix + clientID
 
-	if RedisClient == nil {
-		return nil, fmt.Errorf("redis client not initialized")
-	}
-
-	// Try to get from Redis cache
-	cached, err := RedisClient.Get(ctx, cacheKey).Result()
-	if err == nil {
-		var svc service.Service
-		if err := json.Unmarshal([]byte(cached), &svc); err == nil {
-			if svc.ID != uuid.Nil {
-				slog.Debug("Service cache hit from Redis", "client_id", clientID, "key", cacheKey)
-				return &svc, nil
+	if RedisClient != nil {
+		cached, err := RedisClient.Get(ctx, cacheKey).Result()
+		if err == nil {
+			var svc service.Service
+			if err := json.Unmarshal([]byte(cached), &svc); err == nil {
+				if svc.ID != uuid.Nil {
+					slog.Debug("Service cache hit from Redis", "client_id", clientID, "key", cacheKey)
+					return &svc, nil
+				}
 			}
 		}
+	} else {
+		slog.Warn("Redis client not initialized, skipping cache", "client_id", clientID)
 	}
 
 	slog.Debug("Service cache miss, fetching from database", "client_id", clientID)
@@ -101,12 +101,14 @@ func (c *ServiceCache) GetByClientID(ctx context.Context, clientID string) (*ser
 		return nil, err
 	}
 
-	data, err := json.Marshal(svc)
-	if err == nil {
-		if err := RedisClient.Set(ctx, cacheKey, data, ServiceCacheTTL).Err(); err != nil {
-			slog.Warn("Failed to store service in Redis cache", "client_id", clientID, "error", err)
-		} else {
-			slog.Debug("Service cached in Redis", "client_id", clientID, "key", cacheKey, "ttl", ServiceCacheTTL)
+	if RedisClient != nil {
+		data, err := json.Marshal(svc)
+		if err == nil {
+			if err := RedisClient.Set(ctx, cacheKey, data, ServiceCacheTTL).Err(); err != nil {
+				slog.Warn("Failed to store service in Redis cache", "client_id", clientID, "error", err)
+			} else {
+				slog.Debug("Service cached in Redis", "client_id", clientID, "key", cacheKey, "ttl", ServiceCacheTTL)
+			}
 		}
 	}
 
@@ -118,7 +120,8 @@ func (c *ServiceCache) InvalidateByDomain(ctx context.Context, domain string) er
 	cacheKey := ServiceCachePrefix + domain
 
 	if RedisClient == nil {
-		return fmt.Errorf("redis client not initialized")
+		slog.Warn("Redis client not initialized, skipping cache invalidation", "domain", domain)
+		return nil
 	}
 
 	err := RedisClient.Del(ctx, cacheKey).Err()
