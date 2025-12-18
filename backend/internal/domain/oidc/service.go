@@ -3,6 +3,7 @@ package oidc
 import (
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -347,8 +348,8 @@ func (s *Service) verifyCodeVerifier(codeVerifier, codeChallenge, method string)
 	// Encode to base64url
 	computedChallenge := base64.RawURLEncoding.EncodeToString(hash[:])
 
-	// Compare with stored code_challenge
-	if computedChallenge != codeChallenge {
+	// Compare with stored code_challenge using constant-time comparison to prevent timing attacks
+	if len(computedChallenge) != len(codeChallenge) || subtle.ConstantTimeCompare([]byte(computedChallenge), []byte(codeChallenge)) != 1 {
 		return ErrInvalidCodeVerifier
 	}
 
