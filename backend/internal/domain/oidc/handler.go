@@ -56,7 +56,8 @@ func OpenIDConfigurationHandler(domain string) fiber.Handler {
 func (h *Handler) Authorize(c *fiber.Ctx) error {
 	var req AuthorizeRequest
 	if err := c.QueryParser(&req); err != nil {
-		return utils.ErrorResponse(c, "invalid_request: "+err.Error(), fiber.StatusBadRequest)
+		slog.Error("Failed to parse query parameters", "error", err)
+		return utils.ErrorResponse(c, "invalid_request: malformed parameters", fiber.StatusBadRequest)
 	}
 
 	// Validate required fields
@@ -112,7 +113,8 @@ func (h *Handler) Authorize(c *fiber.Ctx) error {
 	// Redirect to redirect_uri with code and state
 	u, err := url.Parse(req.RedirectURI)
 	if err != nil {
-		return utils.ErrorResponse(c, "invalid_redirect_uri: "+err.Error(), fiber.StatusBadRequest)
+		slog.Error("Failed to parse redirect_uri", "error", err, "redirect_uri", req.RedirectURI)
+		return utils.ErrorResponse(c, "invalid_redirect_uri", fiber.StatusBadRequest)
 	}
 
 	q := u.Query()
@@ -129,7 +131,8 @@ func (h *Handler) Authorize(c *fiber.Ctx) error {
 func (h *Handler) Token(c *fiber.Ctx) error {
 	var req TokenRequest
 	if err := c.BodyParser(&req); err != nil {
-		return utils.OIDCErrorResponse(c, "invalid_request", err.Error())
+		slog.Error("Failed to parse token request body", "error", err)
+		return utils.OIDCErrorResponse(c, "invalid_request", "malformed request body")
 	}
 
 	// Validate required fields
@@ -176,7 +179,7 @@ func (h *Handler) Token(c *fiber.Ctx) error {
 	if err != nil {
 		switch err {
 		case ErrInvalidGrant:
-			return utils.OIDCErrorResponse(c, "invalid_grant", err.Error())
+			return utils.OIDCErrorResponse(c, "invalid_grant", "The provided grant is invalid")
 		case ErrInvalidCode:
 			return utils.OIDCErrorResponse(c, "invalid_grant", "The provided authorization code is invalid, expired, or already used", fiber.StatusBadRequest)
 		case ErrInvalidClientID:
@@ -228,10 +231,11 @@ func (h *Handler) UserInfo(c *fiber.Ctx) error {
 func (h *Handler) ValidateAuthorization(c *fiber.Ctx) error {
 	var req AuthorizeRequest
 	if err := c.QueryParser(&req); err != nil {
+		slog.Error("Failed to parse query parameters for validation", "error", err)
 		return c.Status(fiber.StatusOK).JSON(&ValidateAuthorizationRequestResponse{
 			Valid:            false,
 			Error:            "invalid_request",
-			ErrorDescription: "Failed to parse query parameters: " + err.Error(),
+			ErrorDescription: "Failed to parse query parameters",
 		})
 	}
 
@@ -244,10 +248,11 @@ func (h *Handler) ValidateAuthorization(c *fiber.Ctx) error {
 func (h *Handler) ConfirmAuthorization(c *fiber.Ctx) error {
 	var req ConfirmAuthorizationRequest
 	if err := c.BodyParser(&req); err != nil {
+		slog.Error("Failed to parse confirmation request body", "error", err)
 		return c.Status(fiber.StatusOK).JSON(&ConfirmAuthorizationResponse{
 			Success:          false,
 			Error:            "invalid_request",
-			ErrorDescription: "Failed to parse request body: " + err.Error(),
+			ErrorDescription: "Failed to parse request body",
 		})
 	}
 
@@ -356,10 +361,11 @@ func (h *Handler) ConfirmAuthorization(c *fiber.Ctx) error {
 	// Build redirect URI with code and state
 	u, err := url.Parse(req.RedirectURI)
 	if err != nil {
+		slog.Error("Failed to parse redirect_uri in ConfirmAuthorization", "error", err, "redirect_uri", req.RedirectURI)
 		return c.Status(fiber.StatusOK).JSON(&ConfirmAuthorizationResponse{
 			Success:          false,
 			Error:            "invalid_redirect_uri",
-			ErrorDescription: "Invalid redirect_uri format: " + err.Error(),
+			ErrorDescription: "Invalid redirect_uri format",
 		})
 	}
 
