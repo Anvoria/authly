@@ -280,6 +280,9 @@ func (s *Service) ExchangeCode(req *TokenRequest, sessionID uuid.UUID, refreshSe
 
 	// Mark code as used
 	if err := s.codeRepo.MarkAsUsed(req.Code); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrInvalidCode
+		}
 		return nil, fmt.Errorf("failed to mark code as used: %w", err)
 	}
 

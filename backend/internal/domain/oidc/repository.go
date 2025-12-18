@@ -41,9 +41,19 @@ func (r *repository) FindByCode(code string) (*AuthorizationCode, error) {
 
 // MarkAsUsed marks an authorization code as used
 func (r *repository) MarkAsUsed(code string) error {
-	return r.db.Model(&AuthorizationCode{}).
-		Where("code = ?", code).
-		Update("used", true).Error
+	result := r.db.Model(&AuthorizationCode{}).
+		Where("code = ? AND used = false AND expires_at > ?", code, time.Now()).
+		Update("used", true)
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+
+	return nil
 }
 
 // DeleteExpired deletes expired authorization codes
