@@ -26,7 +26,13 @@ func NewHandler(service ServiceInterface) *Handler {
 
 // OpenIDConfigurationHandler returns an HTTP handler that serves the OpenID Connect discovery document for the provided domain.
 // The handler responds with a JSON object containing the issuer, authorization/token/userinfo/jwks endpoints, supported scopes,
-// supported response and grant types, subject types, and supported ID token signing algorithms.
+// OpenIDConfigurationHandler returns an HTTP handler that serves the OpenID Connect discovery
+// (/.well-known/openid-configuration) document for the given issuer domain.
+// 
+// The handler responds with a JSON object containing the issuer and endpoint URLs (authorization,
+// token, userinfo, jwks), supported scopes, supported response and grant types, subject types,
+// and supported ID token signing algorithms. The provided domain is used as the issuer base URL
+// for all advertised endpoints.
 func OpenIDConfigurationHandler(domain string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
