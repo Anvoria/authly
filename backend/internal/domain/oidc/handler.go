@@ -116,20 +116,21 @@ func (h *Handler) Token(c *fiber.Ctx) error {
 	var req TokenRequest
 	if err := c.BodyParser(&req); err != nil {
 		slog.Error("Failed to parse token request body", "error", err)
-		return utils.OIDCErrorResponse(c, "invalid_request", "malformed request body")
+		return utils.OIDCErrorResponse(c, ErrorCodeInvalidRequest, "malformed request body")
 	}
 
 	// Validate common required fields
 	if req.GrantType == "" {
-		return utils.OIDCErrorResponse(c, "invalid_request", "grant_type is required")
+		return utils.OIDCErrorResponse(c, ErrorCodeInvalidRequest, "grant_type is required")
 	}
 	if req.ClientID == "" {
-		return utils.OIDCErrorResponse(c, "invalid_request", "client_id is required")
+		return utils.OIDCErrorResponse(c, ErrorCodeInvalidRequest, "client_id is required")
 	}
 
-	if req.GrantType == "refresh_token" {
+	switch req.GrantType {
+	case "refresh_token":
 		if req.RefreshToken == "" {
-			return utils.OIDCErrorResponse(c, "invalid_request", "refresh_token is required")
+			return utils.OIDCErrorResponse(c, ErrorCodeInvalidRequest, "refresh_token is required")
 		}
 
 		res, err := h.service.RefreshToken(&req)
@@ -141,52 +142,55 @@ func (h *Handler) Token(c *fiber.Ctx) error {
 			return utils.OIDCErrorResponse(c, oidcErr.Code, oidcErr.Description, oidcErr.StatusCode)
 		}
 		return c.Status(fiber.StatusOK).JSON(res)
-	}
 
-	// Default to authorization_code flow
-	if req.Code == "" {
-		return utils.OIDCErrorResponse(c, "invalid_request", "code is required")
-	}
-	if req.RedirectURI == "" {
-		return utils.OIDCErrorResponse(c, "invalid_request", "redirect_uri is required")
-	}
-
-	// Get session from cookie
-	sessionCookie := c.Cookies("session")
-	if sessionCookie == "" {
-		return utils.OIDCErrorResponse(c, "invalid_grant", "Session cookie is required", fiber.StatusUnauthorized)
-	}
-
-	// Parse session cookie: format is "sessionID:secret"
-	parts := strings.SplitN(sessionCookie, ":", 2)
-	if len(parts) != 2 {
-		return utils.OIDCErrorResponse(c, "invalid_grant", "Invalid session cookie format", fiber.StatusUnauthorized)
-	}
-
-	sessionIDStr := parts[0]
-	refreshSecret := parts[1]
-
-	if sessionIDStr == "" || refreshSecret == "" {
-		return utils.OIDCErrorResponse(c, "invalid_grant", "Invalid session cookie", fiber.StatusUnauthorized)
-	}
-
-	// Parse session ID as UUID
-	sessionID, err := uuid.Parse(sessionIDStr)
-	if err != nil {
-		return utils.OIDCErrorResponse(c, "invalid_grant", "Invalid session ID format", fiber.StatusUnauthorized)
-	}
-
-	// Call service with existing session
-	res, err := h.service.ExchangeCode(&req, sessionID, refreshSecret)
-	if err != nil {
-		oidcErr := MapErrorToOIDC(err)
-		if oidcErr.Code == ErrorCodeServerError {
-			slog.Error("Token endpoint error", "error", err)
+	case "authorization_code":
+		if req.Code == "" {
+			return utils.OIDCErrorResponse(c, ErrorCodeInvalidRequest, "code is required")
 		}
-		return utils.OIDCErrorResponse(c, oidcErr.Code, oidcErr.Description, oidcErr.StatusCode)
-	}
+		if req.RedirectURI == "" {
+			return utils.OIDCErrorResponse(c, ErrorCodeInvalidRequest, "redirect_uri is required")
+		}
 
-	return c.Status(fiber.StatusOK).JSON(res)
+		// Get session from cookie
+		sessionCookie := c.Cookies("session")
+		if sessionCookie == "" {
+			return utils.OIDCErrorResponse(c, ErrorCodeInvalidGrant, "Session cookie is required", fiber.StatusUnauthorized)
+		}
+
+		// Parse session cookie: format is "sessionID:secret"
+		parts := strings.SplitN(sessionCookie, ":", 2)
+		if len(parts) != 2 {
+			return utils.OIDCErrorResponse(c, ErrorCodeInvalidGrant, "Invalid session cookie format", fiber.StatusUnauthorized)
+		}
+
+		sessionIDStr := parts[0]
+		refreshSecret := parts[1]
+
+		if sessionIDStr == "" || refreshSecret == "" {
+			return utils.OIDCErrorResponse(c, ErrorCodeInvalidGrant, "Invalid session cookie", fiber.StatusUnauthorized)
+		}
+
+		// Parse session ID as UUID
+		sessionID, err := uuid.Parse(sessionIDStr)
+		if err != nil {
+			return utils.OIDCErrorResponse(c, ErrorCodeInvalidGrant, "Invalid session ID format", fiber.StatusUnauthorized)
+		}
+
+		// Call service with existing session
+		res, err := h.service.ExchangeCode(&req, sessionID, refreshSecret)
+		if err != nil {
+			oidcErr := MapErrorToOIDC(err)
+			if oidcErr.Code == ErrorCodeServerError {
+				slog.Error("Token endpoint error", "error", err)
+			}
+			return utils.OIDCErrorResponse(c, oidcErr.Code, oidcErr.Description, oidcErr.StatusCode)
+		}
+
+		return c.Status(fiber.StatusOK).JSON(res)
+
+	default:
+		return utils.OIDCErrorResponse(c, ErrorCodeUnsupportedGrantType, "unsupported grant_type")
+	}
 }
 
 // UserInfo handles the OIDC UserInfo endpoint

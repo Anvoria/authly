@@ -12,6 +12,7 @@ const (
 	ErrorCodeInvalidGrant            = "invalid_grant"
 	ErrorCodeUnauthorizedClient      = "unauthorized_client"
 	ErrorCodeUnsupportedResponseType = "unsupported_response_type"
+	ErrorCodeUnsupportedGrantType    = "unsupported_grant_type"
 	ErrorCodeInvalidScope            = "invalid_scope"
 	ErrorCodeServerError             = "server_error"
 	ErrorCodeLoginRequired           = "login_required"
@@ -31,6 +32,9 @@ var (
 
 	// ErrInvalidResponseType is returned when the response_type is not supported by the authorization server.
 	ErrInvalidResponseType = errors.New("unsupported_response_type")
+
+	// ErrUnsupportedGrantType is returned when the grant_type is not supported.
+	ErrUnsupportedGrantType = errors.New("unsupported_grant_type")
 
 	// ErrInvalidCodeChallenge is returned when the code_challenge is missing or invalid.
 	ErrInvalidCodeChallenge = errors.New("invalid_code_challenge")
@@ -79,6 +83,8 @@ func MapErrorToOIDC(err error) OIDCError {
 		return OIDCError{Code: ErrorCodeInvalidScope, Description: "One or more requested scopes are not allowed", StatusCode: http.StatusBadRequest}
 	case ErrInvalidResponseType:
 		return OIDCError{Code: ErrorCodeUnsupportedResponseType, Description: "Only 'code' response_type is supported", StatusCode: http.StatusBadRequest}
+	case ErrUnsupportedGrantType:
+		return OIDCError{Code: ErrorCodeUnsupportedGrantType, Description: "The authorization grant type is not supported", StatusCode: http.StatusBadRequest}
 	case ErrInvalidCodeChallenge:
 		return OIDCError{Code: ErrorCodeInvalidRequest, Description: "Invalid code_challenge format", StatusCode: http.StatusBadRequest}
 	case ErrInvalidCodeChallengeMethod:
