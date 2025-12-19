@@ -91,6 +91,36 @@ func (s *Service) GenerateAccessToken(sub, sid string, scopes []string, audience
 	return s.KeyStore.Sign(claims)
 }
 
+// GenerateIDToken generates an OIDC-compliant ID token
+func (s *Service) GenerateIDToken(sub, audience, nonce string, authTime time.Time, claims map[string]interface{}) (string, error) {
+	now := time.Now()
+	exp := now.Add(1 * time.Hour)
+
+	builder := jwt.NewBuilder().
+		Subject(sub).
+		Audience([]string{audience}).
+		Issuer(s.issuer).
+		IssuedAt(now).
+		Expiration(exp).
+		Claim("auth_time", authTime.Unix())
+
+	if nonce != "" {
+		builder.Claim("nonce", nonce)
+	}
+
+	// Add additional claims (profile, email, etc.)
+	for k, v := range claims {
+		builder.Claim(k, v)
+	}
+
+	token, err := builder.Build()
+	if err != nil {
+		return "", err
+	}
+
+	return s.KeyStore.SignToken(token)
+}
+
 // filterAccessTokenScopes removes OIDC scopes that don't belong in access token
 // filterAccessTokenScopes filters out OIDC scopes that are intended for ID tokens or userinfo ("openid", "profile", "email") from the provided scope list.
 // It returns a new slice containing only the scopes appropriate for inclusion in an access token.

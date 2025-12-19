@@ -7,7 +7,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"log/slog"
 	"slices"
 	"strings"
 	"time"
@@ -125,6 +124,7 @@ func (s *Service) Authorize(req *AuthorizeRequest, userID uuid.UUID) (*Authorize
 		UserID:        userID,
 		RedirectURI:   req.RedirectURI,
 		Scopes:        strings.Join(requestedScopes, " "),
+		Nonce:         req.Nonce,
 		CodeChallenge: req.CodeChallenge,
 		ChallengeMeth: req.CodeChallengeMethod,
 		ExpiresAt:     time.Now().Add(s.codeLifetime),
@@ -249,11 +249,6 @@ func (s *Service) ExchangeCode(req *TokenRequest, sessionID uuid.UUID, refreshSe
 		}
 	}
 
-	if slices.Contains(strings.Fields(authCode.Scopes), "openid") {
-		// TODO: Generate ID token if openid scope is present
-		slog.Error("OpenID scope is not supported yet")
-	}
-
 	// Validate PKCE if code_challenge was provided
 	if authCode.CodeChallenge != "" {
 		if req.CodeVerifier == "" {
@@ -290,6 +285,26 @@ func (s *Service) ExchangeCode(req *TokenRequest, sessionID uuid.UUID, refreshSe
 
 	oidcScopes := strings.Fields(authCode.Scopes)
 
+	// Generate ID Token if openid scope is present
+	var idToken string
+	if slices.Contains(oidcScopes, "openid") {
+		userInfo, err := s.GetUserInfo(authCode.UserID.String(), oidcScopes)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get user info for id token: %w", err)
+		}
+
+		idToken, err = s.authService.GenerateIDToken(
+			authCode.UserID.String(),
+			req.ClientID,
+			authCode.Nonce,
+			sess.CreatedAt,
+			userInfo,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate id token: %w", err)
+		}
+	}
+
 	permissions, err := s.permissionService.BuildScopes(authCode.UserID.String())
 	if err != nil {
 		return nil, fmt.Errorf("failed to build permissions: %w", err)
@@ -322,6 +337,7 @@ func (s *Service) ExchangeCode(req *TokenRequest, sessionID uuid.UUID, refreshSe
 		ExpiresIn:    900, // 15 minutes in seconds
 		RefreshToken: fmt.Sprintf("%s:%s", sessionID.String(), refreshSecret),
 		Scope:        authCode.Scopes,
+		IDToken:      idToken,
 	}, nil
 }
 
