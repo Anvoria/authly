@@ -10,6 +10,7 @@ import (
 	"crypto/rand"
 	"crypto/sha3"
 	"encoding/base64"
+	"strings"
 
 	"github.com/Anvoria/authly/internal/cache"
 	"github.com/google/uuid"
@@ -29,12 +30,13 @@ var (
 
 // Service interface for session operations
 type Service interface {
-	Create(userID uuid.UUID, userAgent, ip string, ttl time.Duration) (sessionID uuid.UUID, secret string, err error)
+	Create(userID uuid.UUID, userAgent, ip string, scopes []string, ttl time.Duration) (sessionID uuid.UUID, secret string, err error)
 	Validate(sessionID uuid.UUID, secret string) (*Session, error)
 	Rotate(sessionID uuid.UUID, oldSecret string, ttl time.Duration) (newSecret string, err error)
 	Revoke(sessionID uuid.UUID) error
 	RevokeAllUserSessions(userID uuid.UUID) error
 	Exists(sessionID uuid.UUID) (bool, error)
+	UpdateScopes(sessionID uuid.UUID, scopes []string) error
 }
 
 // service struct for session operations
@@ -71,19 +73,20 @@ func hashSecret(secret string) string {
 }
 
 // Create creates a new session
-func (s *service) Create(userID uuid.UUID, userAgent, ip string, ttl time.Duration) (uuid.UUID, string, error) {
+func (s *service) Create(userID uuid.UUID, userAgent, ip string, scopes []string, ttl time.Duration) (uuid.UUID, string, error) {
 	secret, err := generateSecret()
 	if err != nil {
 		return uuid.Nil, "", err
 	}
 
 	sess := &Session{
-		UserID:      userID.String(),
-		RefreshHash: hashSecret(secret),
-		ExpiresAt:   time.Now().UTC().Add(ttl),
-		UserAgent:   userAgent,
-		IPAddress:   ip,
-		LastUsedAt:  time.Now().UTC(),
+		UserID:        userID.String(),
+		RefreshHash:   hashSecret(secret),
+		ExpiresAt:     time.Now().UTC().Add(ttl),
+		UserAgent:     userAgent,
+		IPAddress:     ip,
+		GrantedScopes: strings.Join(scopes, " "),
+		LastUsedAt:    time.Now().UTC(),
 	}
 
 	sess.ID = uuid.New()
@@ -216,4 +219,9 @@ func (s *service) Exists(id uuid.UUID) (bool, error) {
 	}
 
 	return true, nil
+}
+
+// UpdateScopes updates the granted scopes for a session
+func (s *service) UpdateScopes(sessionID uuid.UUID, scopes []string) error {
+	return s.repo.UpdateScopes(sessionID, strings.Join(scopes, " "))
 }

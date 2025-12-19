@@ -14,6 +14,7 @@ type Session struct {
 	RefreshVersion int       `gorm:"column:refresh_version;default:1"`
 	ExpiresAt      time.Time `gorm:"column:expires_at;not null"`
 	Revoked        bool      `gorm:"column:revoked;default:false"`
+	GrantedScopes  string    `gorm:"column:granted_scopes;type:text"` // space-separated scopes
 
 	IPAddress string `gorm:"column:ip_address;type:text"`
 	UserAgent string `gorm:"column:user_agent;type:text"`

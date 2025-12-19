@@ -287,6 +287,11 @@ func (s *Service) ExchangeCode(req *TokenRequest, sessionID uuid.UUID, refreshSe
 
 	oidcScopes := strings.Fields(authCode.Scopes)
 
+	// Update session with granted scopes (binds session to these OIDC scopes)
+	if err := s.sessionService.UpdateScopes(sessionID, oidcScopes); err != nil {
+		return nil, fmt.Errorf("failed to update session scopes: %w", err)
+	}
+
 	// Generate ID Token if openid scope is present
 	var idToken string
 	if slices.Contains(oidcScopes, "openid") {
@@ -377,27 +382,14 @@ func (s *Service) RefreshToken(req *TokenRequest) (*TokenResponse, error) {
 		return nil, ErrClientNotActive
 	}
 
-	// Validate client_secret for confidential clients
-	if service.ClientSecret != "" {
-		if req.ClientSecret != service.ClientSecret {
+	// Validate client_secret if provided
+	if service.ClientSecret != "" && req.ClientSecret != "" {
+		if service.ClientSecret != req.ClientSecret {
 			return nil, ErrInvalidClientSecret
 		}
 	}
 
-	// Validate scopes
-	var requestedScopes []string
-	if req.Scope != "" {
-		requestedScopes = strings.Fields(req.Scope)
-		if !s.isValidScopes(service.AllowedScopes, requestedScopes) {
-			return nil, ErrInvalidScope
-		}
-	} else {
-		// If no scope is requested, default to all allowed scopes for the client
-		// This is a simplification; ideally we should persist granted scopes
-		requestedScopes = service.AllowedScopes
-	}
-
-	// Validate session first to get UserID
+	// Validate session first to get UserID and GrantedScopes
 	sess, err := s.sessionService.Validate(sessionID, refreshSecret)
 	if err != nil {
 		if errors.Is(err, session.ErrInvalidSession) || errors.Is(err, session.ErrInvalidSecret) || errors.Is(err, session.ErrExpiredSession) {
@@ -406,10 +398,22 @@ func (s *Service) RefreshToken(req *TokenRequest) (*TokenResponse, error) {
 		return nil, fmt.Errorf("failed to validate session: %w", err)
 	}
 
-	userID, err := uuid.Parse(sess.UserID)
-	if err != nil {
-		return nil, fmt.Errorf("invalid user id in session")
+	// Validate Scopes against originally granted scopes (RFC 6749 Section 6)
+	var requestedScopes []string
+	grantedScopes := strings.Fields(sess.GrantedScopes)
+
+	if req.Scope != "" {
+		requestedScopes = strings.Fields(req.Scope)
+		// Check if requested scopes are a subset of granted scopes (Downscoping)
+		if !s.isValidScopes(grantedScopes, requestedScopes) {
+			return nil, ErrInvalidScope
+		}
+	} else {
+		// If no scope requested, default to originally granted scopes
+		requestedScopes = grantedScopes
 	}
+
+	userID, err := uuid.Parse(sess.UserID)
 
 	// Rotate session (Refresh Token Rotation)
 	// We use a default TTL of 7 days (168 hours) for refreshed sessions
@@ -588,11 +592,10 @@ func (s *Service) PasswordGrant(req *TokenRequest) (*TokenResponse, error) {
 	// We don't have userAgent/IP here easily unless passed in request context,
 	// but TokenRequest doesn't have it. We could pass it if we changed signature.
 	// For now, use placeholders or empty.
-	sessionID, secret, err := s.sessionService.Create(u.ID, "password-grant-client", "", 24*time.Hour)
+	sessionID, secret, err := s.sessionService.Create(u.ID, "password-grant-client", "", requestedScopes, 24*time.Hour)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session: %w", err)
 	}
-
 	// Generate ID Token if openid scope is present
 	var idToken string
 	if slices.Contains(requestedScopes, "openid") {

@@ -15,6 +15,7 @@ type Repository interface {
 	Revoke(id uuid.UUID) error
 	UpdateLastUsed(id uuid.UUID, t time.Time) error
 	FindSessionsByUserID(userID uuid.UUID) ([]Session, error)
+	UpdateScopes(id uuid.UUID, scopes string) error
 }
 
 type repository struct {
@@ -82,4 +83,10 @@ func (r *repository) FindSessionsByUserID(userID uuid.UUID) ([]Session, error) {
 		return nil, err
 	}
 	return sessions, nil
+}
+
+func (r *repository) UpdateScopes(id uuid.UUID, scopes string) error {
+	return r.db.Model(&Session{}).
+		Where("id = ?", id).
+		Update("granted_scopes", scopes).Error
 }
