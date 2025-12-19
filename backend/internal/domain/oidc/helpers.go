@@ -71,7 +71,7 @@ func (s *Service) GetUserInfo(userID string, scopes []string) (map[string]interf
 
 	// profile scope claims
 	if scopeSet["profile"] {
-		claims["name"] = fmt.Sprintf("%s %s", u.FirstName, u.LastName)
+		claims["name"] = strings.TrimSpace(fmt.Sprintf("%s %s", u.FirstName, u.LastName))
 		claims["preferred_username"] = u.Username
 		claims["given_name"] = u.FirstName
 		claims["family_name"] = u.LastName
