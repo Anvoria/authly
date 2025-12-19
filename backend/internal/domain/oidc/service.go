@@ -592,14 +592,10 @@ func (s *Service) PasswordGrant(req *TokenRequest) (*TokenResponse, error) {
 	}
 
 	// Create a new session (Password grant acts like a login)
-	// We don't have userAgent/IP here easily unless passed in request context,
-	// but TokenRequest doesn't have it. We could pass it if we changed signature.
-	// For now, use placeholders or empty.
-	sessionID, secret, err := s.sessionService.Create(u.ID, "password-grant-client", "", requestedScopes, 24*time.Hour)
+	sessionID, secret, err := s.sessionService.Create(u.ID, req.UserAgent, req.IPAddress, requestedScopes, 24*time.Hour)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session: %w", err)
-	}
-	// Generate ID Token if openid scope is present
+	} // Generate ID Token if openid scope is present
 	var idToken string
 	if slices.Contains(requestedScopes, "openid") {
 		userInfo, err := s.GetUserInfo(u.ID.String(), requestedScopes)

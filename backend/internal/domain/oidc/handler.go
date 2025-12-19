@@ -137,6 +137,10 @@ func (h *Handler) Token(c *fiber.Ctx) error {
 		return utils.OIDCErrorResponse(c, ErrorCodeInvalidRequest, "malformed request body")
 	}
 
+	// Capture request context for session creation (Password Grant)
+	req.UserAgent = c.Get("User-Agent")
+	req.IPAddress = c.IP()
+
 	// Validate common required fields
 	if req.GrantType == "" {
 		return utils.OIDCErrorResponse(c, ErrorCodeInvalidRequest, "grant_type is required")

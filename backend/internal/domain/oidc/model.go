@@ -37,6 +37,8 @@ type TokenRequest struct {
 	Scope        string `form:"scope"`
 	Username     string `form:"username"`
 	Password     string `form:"password"`
+	UserAgent    string `form:"-"` // Populated from request header
+	IPAddress    string `form:"-"` // Populated from request remote address
 }
 
 // TokenResponse represents the OAuth2 token response
