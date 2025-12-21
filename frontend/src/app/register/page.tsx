@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import AuthorizeLayout from "@/authly/components/authorize/AuthorizeLayout";
 import Input from "@/authly/components/ui/Input";
 import Button from "@/authly/components/ui/Button";
@@ -35,10 +35,13 @@ function RegisterPageContent() {
     const { data: meResponse, isLoading: isCheckingAuth } = useMe();
     const registerMutation = useRegister();
 
+    const isRedirectingRef = useRef(false);
+
     useEffect(() => {
-        if (meResponse?.success) {
+        if (meResponse?.success && !isRedirectingRef.current) {
             const oidcParams = searchParams.get("oidc_params");
             if (oidcParams) {
+                isRedirectingRef.current = true;
                 const handleOidcRedirect = async () => {
                     try {
                         const decoded = decodeURIComponent(oidcParams);
@@ -66,6 +69,7 @@ function RegisterPageContent() {
                 };
                 handleOidcRedirect().catch((error) => {
                     console.error("OIDC redirect failed:", error);
+                    isRedirectingRef.current = false;
                 });
             } else {
                 router.push("/");
