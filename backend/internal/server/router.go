@@ -28,7 +28,8 @@ import (
 // The function loads cryptographic keys from cfg.Auth.KeysPath and requires the configured active KID to be present;
 // SetupRoutes configures all HTTP routes, repositories, caches, services, authentication, and OpenID Connect endpoints on the provided Fiber app.
 // It initializes repositories (user, session, service, permission), caches, core services, key store, authentication and OIDC services and handlers, then registers routes under /v1 (including /auth, /oauth and well-known endpoints).
-// Returns an error if cryptographic keys cannot be loaded or the configured active key is not found.
+// SetupRoutes configures HTTP routes, repositories, caches, services, authentication, and middleware on the provided Fiber app.
+// It loads cryptographic keys and returns an error if the keys cannot be loaded or the configured active key is not present.
 func SetupRoutes(app *fiber.App, envConfig *config.Environment, cfg *config.Config) error {
 	api := app.Group("/v1")
 
