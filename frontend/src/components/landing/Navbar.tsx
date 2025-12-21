@@ -5,10 +5,19 @@ import Link from "next/link";
 import Image from "next/image";
 import { Menu, X } from "lucide-react";
 import Button from "@/authly/components/ui/Button";
+import { useAuthStatus } from "@/authly/lib/hooks/useAuth";
 
+/**
+ * Renders the top navigation bar with responsive layout, scroll-aware styling, mobile collapse behavior, and authentication-aware CTAs.
+ *
+ * The component updates its visual style when the page is scrolled, shows a desktop navigation and CTA area, and provides a collapsible mobile menu. CTA buttons and menu actions adapt based on authentication status.
+ *
+ * @returns A JSX element representing the navigation bar.
+ */
 export default function Navbar() {
     const [isOpen, setIsOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
+    const { data: authStatus } = useAuthStatus();
 
     useEffect(() => {
         const handleScroll = () => {
@@ -73,12 +82,20 @@ export default function Navbar() {
 
                         {/* Desktop CTA Buttons */}
                         <div className="hidden lg:flex items-center gap-3">
-                            <Button href="/login" variant="ghost" size="sm">
-                                SIGN IN
-                            </Button>
-                            <Button href="/register" variant="primary" size="sm">
-                                GET STARTED
-                            </Button>
+                            {authStatus?.authenticated ? (
+                                <Button href="/dashboard" variant="primary" size="sm">
+                                    DASHBOARD
+                                </Button>
+                            ) : (
+                                <>
+                                    <Button href="/login" variant="ghost" size="sm">
+                                        SIGN IN
+                                    </Button>
+                                    <Button href="/register" variant="primary" size="sm">
+                                        GET STARTED
+                                    </Button>
+                                </>
+                            )}
                         </div>
 
                         {/* Mobile Menu Button */}
@@ -117,18 +134,38 @@ export default function Navbar() {
                             </Link>
                         ))}
                         <div className="flex flex-col gap-3 pt-4 border-t border-white/5">
-                            <Button href="/login" variant="ghost" size="sm" fullWidth onClick={() => setIsOpen(false)}>
-                                SIGN IN
-                            </Button>
-                            <Button
-                                href="/signup"
-                                variant="primary"
-                                size="sm"
-                                fullWidth
-                                onClick={() => setIsOpen(false)}
-                            >
-                                GET STARTED
-                            </Button>
+                            {authStatus?.authenticated ? (
+                                <Button
+                                    href="/dashboard"
+                                    variant="primary"
+                                    size="sm"
+                                    fullWidth
+                                    onClick={() => setIsOpen(false)}
+                                >
+                                    DASHBOARD
+                                </Button>
+                            ) : (
+                                <>
+                                    <Button
+                                        href="/login"
+                                        variant="ghost"
+                                        size="sm"
+                                        fullWidth
+                                        onClick={() => setIsOpen(false)}
+                                    >
+                                        SIGN IN
+                                    </Button>
+                                    <Button
+                                        href="/register"
+                                        variant="primary"
+                                        size="sm"
+                                        fullWidth
+                                        onClick={() => setIsOpen(false)}
+                                    >
+                                        GET STARTED
+                                    </Button>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>

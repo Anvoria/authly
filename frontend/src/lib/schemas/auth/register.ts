@@ -8,7 +8,13 @@ export const registerRequestSchema = z.object({
     last_name: z.string().min(1).max(100).optional(),
     email: z.email().max(255).optional(),
     username: z.string().min(3).max(50),
-    password: z.string().min(8).max(128),
+    password: z
+        .string()
+        .min(8, "Password must be at least 8 characters long")
+        .max(128)
+        .regex(/[!@#$%^&*(),.?":{}|<>]/, {
+            message: "Password must contain at least one special character",
+        }),
 });
 
 /**
@@ -58,7 +64,13 @@ export const registerFormSchema = z
         last_name: z.string().min(1).max(100).optional().or(z.literal("")),
         email: z.email().max(255).optional().or(z.literal("")),
         username: z.string().min(3).max(50),
-        password: z.string().min(8).max(128),
+        password: z
+            .string()
+            .min(8, "Password must be at least 8 characters long")
+            .max(128)
+            .regex(/[!@#$%^&*(),.?":{}|<>]/, {
+                message: "Password must contain at least one special character",
+            }),
         confirmPassword: z.string(),
     })
     .refine((data) => data.password === data.confirmPassword, {
