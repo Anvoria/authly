@@ -42,7 +42,10 @@ type Service struct {
 	revocationCache   *cache.TokenRevocationCache
 }
 
-// NewService constructs a Service configured with the provided user repository, session service, permission service, key store, issuer, and revocation cache.
+// NewService constructs and returns a *Service configured with the provided dependencies.
+// 
+// The returned Service is initialized with the users repository, session service,
+// permission service, role service, key store, issuer string, and an optional token revocation cache.
 func NewService(users user.Repository, sessions session.Service, permService permission.ServiceInterface, roleService role.Service, keyStore *KeyStore, issuer string, revocationCache *cache.TokenRevocationCache) *Service {
 	return &Service{
 		Users:             users,

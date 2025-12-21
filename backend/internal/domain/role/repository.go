@@ -26,7 +26,7 @@ type repository struct {
 	db *gorm.DB
 }
 
-// NewRepository creates a new role repository
+// NewRepository returns a Repository backed by the provided GORM database instance.
 func NewRepository(db *gorm.DB) Repository {
 	return &repository{db: db}
 }

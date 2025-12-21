@@ -23,7 +23,8 @@ type service struct {
 	permissionRepo permission.Repository
 }
 
-// NewService creates a new role service
+// NewService returns a Service implementation backed by the provided role and permission repositories.
+ // The returned Service uses repo for role persistence and permissionRepo for user permission operations.
 func NewService(repo Repository, permissionRepo permission.Repository) Service {
 	return &service{
 		repo:           repo,
