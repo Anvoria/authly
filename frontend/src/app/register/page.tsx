@@ -59,11 +59,14 @@ function RegisterPageContent() {
                             authorizeUrl.searchParams.set(key, value);
                         });
                         router.push(authorizeUrl.toString());
-                    } catch {
+                    } catch (error) {
+                        console.error("Failed to process OIDC parameters:", error);
                         router.push("/authorize?" + oidcParams);
                     }
                 };
-                handleOidcRedirect();
+                handleOidcRedirect().catch((error) => {
+                    console.error("OIDC redirect failed:", error);
+                });
             } else {
                 router.push("/");
             }
