@@ -50,7 +50,7 @@ function AuthorizePageContent() {
                 type: "error",
                 error: {
                     title: "Invalid Request",
-                    message: validationParams.error!.error_description,
+                    message: validationParams.error!.error_description || "The authorization request is invalid",
                 },
             };
         }
