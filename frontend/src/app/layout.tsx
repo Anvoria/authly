@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Sora, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import QueryProvider from "@/authly/components/providers/QueryProvider";
 
 const sora = Sora({
     subsets: ["latin"],
@@ -44,7 +45,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
     return (
         <html lang="en" className={`${sora.variable} ${mono.variable}`}>
-            <body className="font-display antialiased">{children}</body>
+            <body className="font-display antialiased">
+                <QueryProvider>{children}</QueryProvider>
+            </body>
         </html>
     );
 }
