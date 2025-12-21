@@ -7,6 +7,13 @@ import { Menu, X } from "lucide-react";
 import Button from "@/authly/components/ui/Button";
 import { useAuthStatus } from "@/authly/lib/hooks/useAuth";
 
+/**
+ * Renders the top navigation bar with responsive layout, scroll-aware styling, mobile collapse behavior, and authentication-aware CTAs.
+ *
+ * The component updates its visual style when the page is scrolled, shows a desktop navigation and CTA area, and provides a collapsible mobile menu. CTA buttons and menu actions adapt based on authentication status.
+ *
+ * @returns A JSX element representing the navigation bar.
+ */
 export default function Navbar() {
     const [isOpen, setIsOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);

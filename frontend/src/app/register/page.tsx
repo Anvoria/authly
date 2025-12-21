@@ -10,6 +10,13 @@ import { registerFormSchema, registerRequestSchema, type RegisterFormData } from
 import { redirectToAuthorize } from "@/authly/lib/oidc";
 import { useRegister, useMe } from "@/authly/lib/hooks/useAuth";
 
+/**
+ * Renders the registration page UI, manages form state and validation, submits registration requests, and redirects on success or when already authenticated.
+ *
+ * The component validates input using the registration schema, surfaces per-field and API errors, disables inputs while the registration mutation is pending, and preserves `oidc_params` through redirect flows when present.
+ *
+ * @returns The registration page content as a React element.
+ */
 function RegisterPageContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -206,6 +213,11 @@ function RegisterPageContent() {
     );
 }
 
+/**
+ * Renders the registration page wrapped in a Suspense boundary that shows a fullscreen loading fallback while content loads.
+ *
+ * @returns The React element for the registration page.
+ */
 export default function RegisterPage() {
     return (
         <Suspense

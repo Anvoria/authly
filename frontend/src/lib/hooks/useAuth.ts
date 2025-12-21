@@ -9,6 +9,11 @@ export const authKeys = {
     status: () => [...authKeys.all, "status"] as const,
 };
 
+/**
+ * Fetches the current authenticated user's data and exposes the React Query result.
+ *
+ * @returns The React Query result for the `authKeys.me()` query — includes the fetched user data (`data`) and query state fields such as `isLoading`, `isError`, `error`, and `refetch`.
+ */
 export function useMe() {
     return useQuery({
         queryKey: authKeys.me(),
@@ -17,6 +22,11 @@ export function useMe() {
     });
 }
 
+/**
+ * Provides a mutation hook to perform user login and refresh auth queries on success.
+ *
+ * @returns The mutation configured to call the login API with a `LoginRequest`. If the response has `success === true`, it invalidates `authKeys.me()` and `authKeys.status()` so related queries are refetched.
+ */
 export function useLogin() {
     const queryClient = useQueryClient();
 
@@ -31,6 +41,11 @@ export function useLogin() {
     });
 }
 
+/**
+ * Creates a mutation hook to register a new user and invalidate auth-related queries on success.
+ *
+ * @returns The React Query mutation result for registering a user. When the registration response has `success` equal to `true`, it invalidates the auth `me` and `status` query keys to trigger refetch. 
+ */
 export function useRegister() {
     const queryClient = useQueryClient();
 
@@ -45,6 +60,11 @@ export function useRegister() {
     });
 }
 
+/**
+ * Fetches the current authentication status.
+ *
+ * @returns The React Query result for the auth status request; `data` contains the status response when available.
+ */
 export function useAuthStatus() {
     return useQuery({
         queryKey: authKeys.status(),

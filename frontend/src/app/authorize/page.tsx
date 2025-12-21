@@ -21,6 +21,15 @@ type AuthPageState =
     | { type: "consent"; client: { name: string; logo_url?: string }; scopes: string[] }
     | { type: "redirecting" };
 
+/**
+ * Render the authorize page content and drive validation, consent, and redirect flows for an OIDC authorization request.
+ *
+ * Reads OIDC query parameters, validates the client and requested scopes, checks authentication status, and renders
+ * one of: a validating/redirecting message, an error view (optionally with a return-to-app redirect), or a consent
+ * screen. Also handles approve and deny actions producing the appropriate redirects.
+ *
+ * @returns The JSX for the authorization page or `null` when nothing should be rendered
+ */
 function AuthorizePageContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -255,6 +264,11 @@ function AuthorizePageContent() {
     return null;
 }
 
+/**
+ * Page component that renders the authorization UI and provides a loading fallback.
+ *
+ * @returns The React element for the authorize page wrapped in a Suspense boundary with a centered loading fallback.
+ */
 export default function AuthorizePage() {
     return (
         <Suspense

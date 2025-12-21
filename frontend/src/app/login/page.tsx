@@ -16,6 +16,16 @@ type LoginFormData = {
     password: string;
 };
 
+/**
+ * Render the login form and manage local form state, validation, authentication, and OIDC redirect handling.
+ *
+ * Displays username/password inputs, validates input against the login schema, performs sign-in via the login mutation,
+ * shows field-specific and API errors, and reflects loading states. If the user is already authenticated, or signs in
+ * successfully and an `oidc_params` query parameter is present, the component prepares PKCE parameters when missing,
+ * persists the PKCE verifier, and redirects to the authorize endpoint; otherwise it redirects to the app root.
+ *
+ * @returns The rendered login page content as a React element
+ */
 function LoginPageContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -191,6 +201,11 @@ function LoginPageContent() {
     );
 }
 
+/**
+ * Page wrapper that renders the login UI inside a Suspense boundary.
+ *
+ * @returns The login page UI wrapped in a Suspense boundary. While the login content is resolving, displays a full-screen loading fallback.
+ */
 export default function LoginPage() {
     return (
         <Suspense

@@ -37,10 +37,10 @@ export const viewport: Viewport = {
 };
 
 /**
- * Root layout for the application that applies global font variables and wraps page content.
+ * Provide the application's root HTML structure, apply global font variables, and wrap page content with the QueryProvider.
  *
  * @param children - The application content to render inside the layout.
- * @returns The root HTML structure (`<html>` and `<body>`) containing `children`.
+ * @returns The `<html>` element (lang="en") containing a `<body>` whose children are wrapped by the QueryProvider.
  */
 export default function RootLayout({ children }: { children: React.ReactNode }) {
     return (
