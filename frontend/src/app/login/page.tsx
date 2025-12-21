@@ -1,27 +1,21 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import { Suspense, useState, useEffect, useCallback } from "react";
+import { Suspense, useState, useEffect } from "react";
 import AuthorizeLayout from "@/authly/components/authorize/AuthorizeLayout";
 import Input from "@/authly/components/ui/Input";
 import Button from "@/authly/components/ui/Button";
-import { login, getMe, isApiError } from "@/authly/lib/api";
+import { isApiError } from "@/authly/lib/api";
 import { loginRequestSchema, type LoginRequest } from "@/authly/lib/schemas/auth/login";
 import { generateCodeVerifier, generateCodeChallenge, redirectToAuthorize } from "@/authly/lib/oidc";
 import LocalStorageTokenService from "@/authly/lib/globals/client/LocalStorageTokenService";
+import { useLogin, useMe } from "@/authly/lib/hooks/useAuth";
 
 type LoginFormData = {
     username: string;
     password: string;
 };
 
-/**
- * Renders the login form, performs an initial authentication check, and handles credential submission with validation and redirects.
- *
- * Validates user input, calls the login API, displays field-level and global errors, and redirects on successful authentication — preserving `oidc_params` to the authorize flow when present. While verifying existing authentication on mount, shows a centered loading state.
- *
- * @returns The login page UI as a React element, including inputs for username and password, error display, and navigation links.
- */
 function LoginPageContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -29,24 +23,21 @@ function LoginPageContent() {
         username: "",
         password: "",
     });
-    const [isLoading, setIsLoading] = useState(false);
-    const [isCheckingAuth, setIsCheckingAuth] = useState(true);
     const [errors, setErrors] = useState<Partial<Record<keyof LoginFormData, string>>>({});
     const [apiError, setApiError] = useState<string | null>(null);
 
-    const checkAuthentication = useCallback(async () => {
-        try {
-            const response = await getMe();
-            if (response.success) {
-                // User is already authenticated.
-                // If oidc_params are present, immediately redirect to authorize flow logic
-                const oidcParams = searchParams.get("oidc_params");
-                if (oidcParams) {
+    const { data: meResponse, isLoading: isCheckingAuth } = useMe();
+    const loginMutation = useLogin();
+
+    useEffect(() => {
+        if (meResponse?.success) {
+            const oidcParams = searchParams.get("oidc_params");
+            if (oidcParams) {
+                const handleOidcRedirect = async () => {
                     try {
                         const decoded = decodeURIComponent(oidcParams);
                         const params = new URLSearchParams(decoded);
 
-                        // Check if PKCE parameters are missing and add them if needed
                         if (!params.has("code_challenge")) {
                             const verifier = generateCodeVerifier();
                             const challenge = await generateCodeChallenge(verifier);
@@ -62,26 +53,16 @@ function LoginPageContent() {
                             authorizeUrl.searchParams.set(key, value);
                         });
                         router.push(authorizeUrl.toString());
-                        return;
                     } catch {
                         router.push("/authorize?" + oidcParams);
-                        return;
                     }
-                }
-
-                // Normal login flow - redirect to dashboard
+                };
+                handleOidcRedirect();
+            } else {
                 router.push("/");
             }
-        } catch {
-            // User is not authenticated, continue to login page
-        } finally {
-            setIsCheckingAuth(false);
         }
-    }, [router, searchParams]);
-
-    useEffect(() => {
-        checkAuthentication();
-    }, [checkAuthentication]);
+    }, [meResponse, router, searchParams]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -101,39 +82,34 @@ function LoginPageContent() {
             return;
         }
 
-        setIsLoading(true);
+        const requestData: LoginRequest = {
+            username: formData.username,
+            password: formData.password,
+        };
 
-        try {
-            const requestData: LoginRequest = {
-                username: formData.username,
-                password: formData.password,
-            };
-
-            const response = await login(requestData);
-
-            if (response.success) {
-                const oidcParams = searchParams.get("oidc_params");
-
-                if (oidcParams) {
-                    redirectToAuthorize(oidcParams);
-                    return;
+        loginMutation.mutate(requestData, {
+            onSuccess: (response) => {
+                if (response.success) {
+                    const oidcParams = searchParams.get("oidc_params");
+                    if (oidcParams) {
+                        redirectToAuthorize(oidcParams);
+                    } else {
+                        router.push("/");
+                    }
+                } else {
+                    setApiError(response.error || "Login failed");
                 }
-
-                router.push("/");
-            } else {
-                setApiError(response.error || "Login failed");
-            }
-        } catch (err) {
-            if (isApiError(err)) {
-                setApiError(err.error_description || err.error);
-            } else if (err instanceof Error) {
-                setApiError(err.message);
-            } else {
-                setApiError("An error occurred");
-            }
-        } finally {
-            setIsLoading(false);
-        }
+            },
+            onError: (err) => {
+                if (isApiError(err)) {
+                    setApiError(err.error_description || err.error);
+                } else if (err instanceof Error) {
+                    setApiError(err.message);
+                } else {
+                    setApiError("An error occurred");
+                }
+            },
+        });
     };
 
     const updateField = (field: keyof LoginFormData, value: string) => {
@@ -146,6 +122,8 @@ function LoginPageContent() {
             });
         }
     };
+
+    const isLoading = loginMutation.isPending;
 
     if (isCheckingAuth) {
         return (
@@ -213,11 +191,6 @@ function LoginPageContent() {
     );
 }
 
-/**
- * Client-side login page wrapped in a Suspense boundary that shows a full-screen loading fallback.
- *
- * @returns A JSX element that renders the login page content and displays a centered "Loading..." indicator while suspended.
- */
 export default function LoginPage() {
     return (
         <Suspense

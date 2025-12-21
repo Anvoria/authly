@@ -1,19 +1,15 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import { Suspense, useState, useEffect, useCallback } from "react";
+import { Suspense, useState, useEffect } from "react";
 import AuthorizeLayout from "@/authly/components/authorize/AuthorizeLayout";
 import Input from "@/authly/components/ui/Input";
 import Button from "@/authly/components/ui/Button";
-import { register, getMe, isApiError } from "@/authly/lib/api";
+import { isApiError } from "@/authly/lib/api";
 import { registerFormSchema, registerRequestSchema, type RegisterFormData } from "@/authly/lib/schemas/auth/register";
 import { redirectToAuthorize } from "@/authly/lib/oidc";
+import { useRegister, useMe } from "@/authly/lib/hooks/useAuth";
 
-/**
- * Renders the registration page UI and manages the full registration flow: checks current authentication and redirects if already authenticated, validates form input, submits registration requests, preserves and forwards `oidc_params` when present, and surfaces field and API errors.
- *
- * @returns The JSX element for the register page content.
- */
 function RegisterPageContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -25,26 +21,17 @@ function RegisterPageContent() {
         password: "",
         confirmPassword: "",
     });
-    const [isLoading, setIsLoading] = useState(false);
-    const [isCheckingAuth, setIsCheckingAuth] = useState(true);
     const [errors, setErrors] = useState<Partial<Record<keyof RegisterFormData, string>>>({});
     const [apiError, setApiError] = useState<string | null>(null);
 
-    const checkAuthentication = useCallback(async () => {
-        try {
-            const response = await getMe();
-            if (response.success) {
-                router.push("/");
-            }
-        } catch {
-        } finally {
-            setIsCheckingAuth(false);
-        }
-    }, [router]);
+    const { data: meResponse, isLoading: isCheckingAuth } = useMe();
+    const registerMutation = useRegister();
 
     useEffect(() => {
-        checkAuthentication();
-    }, [checkAuthentication]);
+        if (meResponse?.success) {
+            router.push("/");
+        }
+    }, [meResponse, router]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -64,44 +51,37 @@ function RegisterPageContent() {
             return;
         }
 
-        setIsLoading(true);
+        const requestData = registerRequestSchema.parse({
+            first_name: formData.first_name || undefined,
+            last_name: formData.last_name || undefined,
+            email: formData.email || undefined,
+            username: formData.username,
+            password: formData.password,
+        });
 
-        try {
-            const requestData = registerRequestSchema.parse({
-                first_name: formData.first_name || undefined,
-                last_name: formData.last_name || undefined,
-                email: formData.email || undefined,
-                username: formData.username,
-                password: formData.password,
-            });
-
-            const response = await register(requestData);
-
-            if (response.success) {
-                const oidcParams = searchParams.get("oidc_params");
-
-                if (oidcParams) {
-                    redirectToAuthorize(oidcParams);
-                    return;
+        registerMutation.mutate(requestData, {
+            onSuccess: (response) => {
+                if (response.success) {
+                    const oidcParams = searchParams.get("oidc_params");
+                    if (oidcParams) {
+                        redirectToAuthorize(oidcParams);
+                    } else {
+                        router.push("/");
+                    }
+                } else {
+                    setApiError(response.error || "Registration failed");
                 }
-
-                router.push("/");
-            } else {
-                setApiError(response.error || "Registration failed");
-            }
-        } catch (err) {
-            let errorMessage = "An error occurred";
-            if (isApiError(err)) {
-                errorMessage = err.error_description || err.error;
-            } else if (err instanceof Error) {
-                errorMessage = err.message;
-            } else if (typeof err === "string") {
-                errorMessage = err;
-            }
-            setApiError(errorMessage);
-        } finally {
-            setIsLoading(false);
-        }
+            },
+            onError: (err) => {
+                let errorMessage = "An error occurred";
+                if (isApiError(err)) {
+                    errorMessage = err.error_description || err.error;
+                } else if (err instanceof Error) {
+                    errorMessage = err.message;
+                }
+                setApiError(errorMessage);
+            },
+        });
     };
 
     const updateField = (field: keyof RegisterFormData, value: string) => {
@@ -114,6 +94,8 @@ function RegisterPageContent() {
             });
         }
     };
+
+    const isLoading = registerMutation.isPending;
 
     if (isCheckingAuth) {
         return (
@@ -224,11 +206,6 @@ function RegisterPageContent() {
     );
 }
 
-/**
- * Renders the registration page content inside a Suspense boundary with a centered loading fallback.
- *
- * @returns A JSX element containing <RegisterPageContent /> wrapped in React.Suspense and a full-screen loading indicator.
- */
 export default function RegisterPage() {
     return (
         <Suspense

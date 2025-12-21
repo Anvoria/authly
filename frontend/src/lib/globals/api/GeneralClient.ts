@@ -7,17 +7,6 @@ import {
     type OIDCErrorResponse,
 } from "./interfaces/IRequestResponsePayload";
 
-interface CacheEntry<D> {
-    data: IRequestResponsePayload<D, unknown>;
-    timestamp: number;
-    ttl?: number;
-}
-
-export interface GetOptions {
-    useCache?: boolean;
-    ttl?: number;
-}
-
 /**
  * Determines whether a backend response matches the SuccessResponse shape.
  *
@@ -131,71 +120,10 @@ export const getApiErrorMessage = (error: AxiosError): string => {
 export abstract class BaseClient {
     protected abstract get axiosInstance(): AxiosInstance;
 
-    protected static cache = new Map<string, CacheEntry<unknown>>();
-    protected static defaultTTL = 5 * 60 * 1000;
-    protected static maxCacheSize = 100;
-
-    private static generateCacheKey(url: string, config?: AxiosRequestConfig): string {
-        const configKey = config
-            ? JSON.stringify({
-                  params: config.params,
-                  headers: config.headers,
-              })
-            : "";
-        return `${url}${configKey}`;
-    }
-
-    private static isCacheValid(entry: CacheEntry<unknown>): boolean {
-        if (!entry.ttl) return true;
-        return Date.now() - entry.timestamp < entry.ttl;
-    }
-
-    private static evictOldest(): void {
-        if (BaseClient.cache.size >= BaseClient.maxCacheSize) {
-            const oldestKey = BaseClient.cache.keys().next().value;
-            if (oldestKey) BaseClient.cache.delete(oldestKey);
-        }
-    }
-
-    private static pruneExpired(): void {
-        for (const [key, entry] of BaseClient.cache.entries()) {
-            if (!BaseClient.isCacheValid(entry)) {
-                BaseClient.cache.delete(key);
-            }
-        }
-    }
-
-    public static clearCache(url?: string): void {
-        if (url) {
-            for (const key of BaseClient.cache.keys()) {
-                if (key.startsWith(url)) {
-                    BaseClient.cache.delete(key);
-                }
-            }
-        } else {
-            BaseClient.cache.clear();
-        }
-    }
-
     public async get<D = unknown, E = unknown>(
         url: string,
         config?: AxiosRequestConfig,
-        options?: GetOptions,
     ): Promise<IRequestResponsePayload<D, E>> {
-        const useCache = options?.useCache ?? true;
-        const cacheKey = BaseClient.generateCacheKey(url, config);
-
-        if (useCache) {
-            const cached = BaseClient.cache.get(cacheKey);
-            if (cached) {
-                if (BaseClient.isCacheValid(cached)) {
-                    return cached.data as IRequestResponsePayload<D, E>;
-                } else {
-                    BaseClient.cache.delete(cacheKey);
-                }
-            }
-        }
-
         try {
             const axiosResponse: AxiosResponse<BackendResponse<D>> = await this.axiosInstance.get(url, config);
 
@@ -212,24 +140,12 @@ export abstract class BaseClient {
             const parsed = parseBackendResponse(axiosResponse);
 
             if (parsed.success) {
-                const response: IRequestResponsePayload<D, E> = {
+                return {
                     success: true,
                     data: parsed.data as D,
                     message: parsed.message,
                     rawResponse: axiosResponse,
                 };
-
-                if (useCache) {
-                    BaseClient.pruneExpired();
-                    BaseClient.evictOldest();
-                    BaseClient.cache.set(cacheKey, {
-                        data: response,
-                        timestamp: Date.now(),
-                        ttl: options?.ttl ?? BaseClient.defaultTTL,
-                    });
-                }
-
-                return response;
             } else {
                 return {
                     success: false,
@@ -307,15 +223,12 @@ export abstract class BaseClient {
             const parsed = parseBackendResponse(axiosResponse);
 
             if (parsed.success) {
-                const response: IRequestResponsePayload<T, D> = {
+                return {
                     success: true,
                     data: parsed.data as T,
                     message: parsed.message,
                     rawResponse: axiosResponse,
                 };
-
-                BaseClient.clearCache(url);
-                return response;
             } else {
                 return {
                     success: false,
@@ -424,9 +337,8 @@ export default class GeneralClient extends BaseClient {
     public static async get<D = unknown, E = unknown>(
         url: string,
         config?: AxiosRequestConfig,
-        options?: GetOptions,
     ): Promise<IRequestResponsePayload<D, E>> {
-        return GeneralClient.client.get(url, config, options);
+        return GeneralClient.client.get(url, config);
     }
 
     public static async post<T = unknown, D = Error>(
