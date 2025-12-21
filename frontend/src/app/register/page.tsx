@@ -91,13 +91,20 @@ function RegisterPageContent() {
             return;
         }
 
-        const requestData = registerRequestSchema.parse({
+        const requestValidation = registerRequestSchema.safeParse({
             first_name: formData.first_name || undefined,
             last_name: formData.last_name || undefined,
             email: formData.email || undefined,
             username: formData.username,
             password: formData.password,
         });
+
+        if (!requestValidation.success) {
+            setApiError("Invalid request data");
+            return;
+        }
+
+        const requestData = requestValidation.data;
 
         registerMutation.mutate(requestData, {
             onSuccess: (response) => {
