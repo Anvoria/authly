@@ -7,7 +7,7 @@ import Input from "@/authly/components/ui/Input";
 import Button from "@/authly/components/ui/Button";
 import { isApiError } from "@/authly/lib/api";
 import { loginRequestSchema, type LoginRequest } from "@/authly/lib/schemas/auth/login";
-import { generateCodeVerifier, generateCodeChallenge, redirectToAuthorize } from "@/authly/lib/oidc";
+import { generateCodeVerifier, generateCodeChallenge } from "@/authly/lib/oidc";
 import LocalStorageTokenService from "@/authly/lib/globals/client/LocalStorageTokenService";
 import { useLogin, useMe } from "@/authly/lib/hooks/useAuth";
 
@@ -99,14 +99,7 @@ function LoginPageContent() {
 
         loginMutation.mutate(requestData, {
             onSuccess: (response) => {
-                if (response.success) {
-                    const oidcParams = searchParams.get("oidc_params");
-                    if (oidcParams) {
-                        redirectToAuthorize(oidcParams);
-                    } else {
-                        router.push("/");
-                    }
-                } else {
+                if (!response.success) {
                     setApiError(response.error || "Login failed");
                 }
             },

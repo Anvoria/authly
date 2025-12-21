@@ -7,7 +7,8 @@ import Input from "@/authly/components/ui/Input";
 import Button from "@/authly/components/ui/Button";
 import { isApiError } from "@/authly/lib/api";
 import { registerFormSchema, registerRequestSchema, type RegisterFormData } from "@/authly/lib/schemas/auth/register";
-import { redirectToAuthorize } from "@/authly/lib/oidc";
+import { generateCodeVerifier, generateCodeChallenge } from "@/authly/lib/oidc";
+import LocalStorageTokenService from "@/authly/lib/globals/client/LocalStorageTokenService";
 import { useRegister, useMe } from "@/authly/lib/hooks/useAuth";
 
 /**
@@ -36,9 +37,38 @@ function RegisterPageContent() {
 
     useEffect(() => {
         if (meResponse?.success) {
-            router.push("/");
+            const oidcParams = searchParams.get("oidc_params");
+            if (oidcParams) {
+                const handleOidcRedirect = async () => {
+                    try {
+                        const decoded = decodeURIComponent(oidcParams);
+                        const params = new URLSearchParams(decoded);
+
+                        if (!params.has("code_challenge")) {
+                            const verifier = generateCodeVerifier();
+                            const challenge = await generateCodeChallenge(verifier);
+
+                            params.set("code_challenge", challenge);
+                            params.set("code_challenge_method", "S256");
+
+                            LocalStorageTokenService.setOidcCodeVerifier(verifier);
+                        }
+
+                        const authorizeUrl = new URL("/authorize", window.location.origin);
+                        params.forEach((value, key) => {
+                            authorizeUrl.searchParams.set(key, value);
+                        });
+                        router.push(authorizeUrl.toString());
+                    } catch {
+                        router.push("/authorize?" + oidcParams);
+                    }
+                };
+                handleOidcRedirect();
+            } else {
+                router.push("/");
+            }
         }
-    }, [meResponse, router]);
+    }, [meResponse, router, searchParams]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -68,14 +98,7 @@ function RegisterPageContent() {
 
         registerMutation.mutate(requestData, {
             onSuccess: (response) => {
-                if (response.success) {
-                    const oidcParams = searchParams.get("oidc_params");
-                    if (oidcParams) {
-                        redirectToAuthorize(oidcParams);
-                    } else {
-                        router.push("/");
-                    }
-                } else {
+                if (!response.success) {
                     setApiError(response.error || "Registration failed");
                 }
             },
