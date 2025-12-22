@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import Image from "next/image";
 
 export interface AuthorizeLayoutProps {
@@ -14,6 +14,13 @@ export interface AuthorizeLayoutProps {
  * @returns The layout element containing the header (logo and title) and the provided children
  */
 export default function AuthorizeLayout({ children }: AuthorizeLayoutProps) {
+    useEffect(() => {
+        document.body.classList.add("overflow-hidden");
+        return () => {
+            document.body.classList.remove("overflow-hidden");
+        };
+    }, []);
+
     return (
         <div className="min-h-screen w-full flex items-center justify-center bg-black p-4">
             <div className="w-full max-w-md relative">
