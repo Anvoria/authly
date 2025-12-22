@@ -125,6 +125,9 @@ export async function getUserInfo(): Promise<MeResponse> {
         email?: string;
         given_name?: string;
         family_name?: string;
+        active?: boolean;
+        created_at?: string;
+        updated_at?: string;
     }>("/oauth/userinfo");
 
     if (!response.success) {
@@ -144,9 +147,9 @@ export async function getUserInfo(): Promise<MeResponse> {
                 first_name: response.data.given_name || "",
                 last_name: response.data.family_name || "",
                 email: response.data.email || null,
-                is_active: true, // UserInfo endpoint only works for active users
-                created_at: "", // Not returned by UserInfo
-                updated_at: "", // Not returned by UserInfo
+                is_active: response.data.active ?? true,
+                created_at: response.data.created_at || "",
+                updated_at: response.data.updated_at || "",
             },
         },
         message: "User info fetched successfully",
