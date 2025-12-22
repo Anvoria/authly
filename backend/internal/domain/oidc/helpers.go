@@ -75,6 +75,9 @@ func (s *Service) GetUserInfo(userID string, scopes []string) (map[string]any, e
 		claims["preferred_username"] = u.Username
 		claims["given_name"] = u.FirstName
 		claims["family_name"] = u.LastName
+		claims["created_at"] = u.CreatedAt
+		claims["updated_at"] = u.UpdatedAt
+		claims["active"] = u.IsActive
 	}
 
 	if scopeSet["email"] {
