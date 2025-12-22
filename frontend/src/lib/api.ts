@@ -23,6 +23,7 @@ import type { ApiError } from "./schemas/auth/login";
 import type { ReadonlyURLSearchParams } from "next/navigation";
 import { z } from "zod";
 import { IRequestResponsePayload } from "./globals/api/interfaces/IRequestResponsePayload";
+import { OIDC_CONFIG } from "./config";
 
 export type { ApiError };
 
@@ -320,4 +321,40 @@ export async function exchangeToken(request: TokenRequest): Promise<TokenRespons
 
     const result = tokenResponseSchema.parse(response.data);
     return result;
+}
+
+/**
+ * Attempts to refresh the access token using the backend session cookie.
+ *
+ * This function sends a refresh token request to the OAuth token endpoint without explicitly
+ * providing a refresh_token parameter, relying on the backend to accept the HTTP-only 'session'
+ * cookie as a fallback authentication mechanism for the refresh operation.
+ *
+ * @returns A `TokenResponse` containing the refreshed tokens on success, or an error response
+ *          with `error` and `error_description` on failure. On success includes `access_token`,
+ *          `refresh_token`, `token_type`, and `expires_in` fields.
+ *
+ * @note This function relies on HTTP-only cookies set by the backend to maintain session state.
+ *       It does not require explicit token passing as the backend handles authentication via cookies.
+ *       The request is sent as `application/x-www-form-urlencoded` data as required by OAuth 2.0 specification.
+ */
+export async function refreshAccessToken(): Promise<TokenResponse> {
+    const formData = new URLSearchParams();
+    formData.append("grant_type", "refresh_token");
+    formData.append("client_id", OIDC_CONFIG.client_id);
+
+    const response = await GeneralClient.post<TokenResponse>("/oauth/token", formData.toString(), {
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+    });
+
+    if (!response.success) {
+        return {
+            error: response.error || "refresh_failed",
+            error_description: response.errorDescription || "Failed to refresh token via cookie",
+        };
+    }
+
+    return tokenResponseSchema.parse(response.data);
 }

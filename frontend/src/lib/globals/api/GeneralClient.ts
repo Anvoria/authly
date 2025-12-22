@@ -7,6 +7,7 @@ import {
     type OIDCErrorResponse,
 } from "./interfaces/IRequestResponsePayload";
 import LocalStorageTokenService from "@/authly/lib/globals/client/LocalStorageTokenService";
+import { OIDC_CONFIG } from "@/authly/lib/config";
 
 /**
  * Determines whether a backend response matches the SuccessResponse shape.
@@ -337,6 +338,51 @@ export default class GeneralClient extends BaseClient {
                 (error) => {
                     return Promise.reject(error);
                 },
+            );
+
+            GeneralClient.axiosInstance.interceptors.response.use(
+                (response) => response,
+                async (error: AxiosError) => {
+                    const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
+
+                    if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+                        if (originalRequest.url?.includes("/oauth/token")) {
+                            return Promise.reject(error);
+                        }
+
+                        originalRequest._retry = true;
+
+                        try {
+                            const formData = new URLSearchParams();
+                            formData.append("grant_type", "refresh_token");
+                            formData.append("client_id", OIDC_CONFIG.client_id);
+
+                            const response = await axios.post(
+                                `${process.env.NEXT_PUBLIC_API_ENDPOINT_URL}/oauth/token`,
+                                formData.toString(),
+                                {
+                                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                                    withCredentials: true,
+                                }
+                            );
+
+                            if (response.data && response.data.access_token) {
+                                LocalStorageTokenService.setAccessToken(response.data.access_token);
+                                
+                                if (originalRequest.headers) {
+                                    originalRequest.headers.Authorization = `Bearer ${response.data.access_token}`;
+                                }
+
+                                return GeneralClient.axiosInstance!(originalRequest);
+                            }
+                        } catch (refreshError) {
+                            LocalStorageTokenService.clear();
+                            return Promise.reject(refreshError);
+                        }
+                    }
+
+                    return Promise.reject(error);
+                }
             );
         }
         return GeneralClient.axiosInstance;
