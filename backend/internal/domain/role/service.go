@@ -116,7 +116,39 @@ func (s *service) UpdateRole(updatedRole *Role) error {
 }
 
 func (s *service) DeleteRole(id string) error {
-	return s.repo.Delete(id)
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		txSvc := s.WithTx(tx)
+		svc, ok := txSvc.(*service)
+		if !ok {
+			return fmt.Errorf("internal error: failed to cast service")
+		}
+
+		role, err := svc.repo.FindByID(id)
+		if err != nil {
+			return err
+		}
+
+		userPerms, err := svc.permissionRepo.FindUserPermissionsByRoleID(id)
+		if err != nil {
+			return err
+		}
+
+		for _, perm := range userPerms {
+			perm.Bitmask = perm.Bitmask &^ role.Bitmask
+
+			perm.RoleID = nil
+
+			if err := svc.permissionRepo.UpdateUserPermission(perm); err != nil {
+				return fmt.Errorf("failed to update user permission cleanup: %w", err)
+			}
+
+			if err := svc.permissionRepo.IncrementPermissionVersion(perm.UserID.String()); err != nil {
+				return err
+			}
+		}
+
+		return svc.repo.Delete(id)
+	})
 }
 
 // AssignRole assigns a role to a user, overwriting their current role for that service
