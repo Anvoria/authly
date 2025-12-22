@@ -6,6 +6,7 @@ import {
     type ErrorResponse,
     type OIDCErrorResponse,
 } from "./interfaces/IRequestResponsePayload";
+import LocalStorageTokenService from "@/authly/lib/globals/client/LocalStorageTokenService";
 
 /**
  * Determines whether a backend response matches the SuccessResponse shape.
@@ -323,6 +324,20 @@ export default class GeneralClient extends BaseClient {
                 timeout: 10000,
                 withCredentials: true,
             });
+
+            // Add request interceptor to attach bearer token
+            GeneralClient.axiosInstance.interceptors.request.use(
+                (config) => {
+                    const token = LocalStorageTokenService.accessToken;
+                    if (token) {
+                        config.headers.Authorization = `Bearer ${token}`;
+                    }
+                    return config;
+                },
+                (error) => {
+                    return Promise.reject(error);
+                },
+            );
         }
         return GeneralClient.axiosInstance;
     }

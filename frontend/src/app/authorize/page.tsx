@@ -1,12 +1,11 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import { Suspense, useEffect, useMemo } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import AuthorizeLayout from "@/authly/components/authorize/AuthorizeLayout";
 import ConsentScreen from "@/authly/components/authorize/ConsentScreen";
 import { validateAuthorizationParams, buildErrorRedirect } from "@/authly/lib/oidc";
-import { isApiError } from "@/authly/lib/api";
-import { useAuthStatus } from "@/authly/lib/hooks/useAuth";
+import { isApiError, checkIdPSession } from "@/authly/lib/api";
 import { useValidateAuthorization, useConfirmAuthorization } from "@/authly/lib/hooks/useOidc";
 
 interface ErrorState {
@@ -34,13 +33,21 @@ function AuthorizePageContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
 
-    const { data: authStatus, isLoading: isCheckingAuth } = useAuthStatus();
+    const [hasSession, setHasSession] = useState<boolean | null>(null);
     const {
         data: clientValidation,
         isLoading: isValidatingClient,
         error: validationError,
     } = useValidateAuthorization(searchParams);
     const confirmMutation = useConfirmAuthorization();
+
+    useEffect(() => {
+        const check = async () => {
+            const session = await checkIdPSession();
+            setHasSession(session);
+        };
+        check();
+    }, []);
 
     const validationParams = useMemo(() => validateAuthorizationParams(searchParams), [searchParams]);
 
@@ -65,7 +72,7 @@ function AuthorizePageContent() {
             };
         }
 
-        if (isValidatingClient || isCheckingAuth) {
+        if (isValidatingClient || hasSession === null) {
             return { type: "validating" };
         }
 
@@ -112,7 +119,7 @@ function AuthorizePageContent() {
                 };
             }
 
-            if (authStatus?.authenticated) {
+            if (hasSession) {
                 return {
                     type: "consent",
                     client: {
@@ -127,7 +134,7 @@ function AuthorizePageContent() {
         }
 
         return { type: "validating" };
-    }, [validationParams, clientValidation, validationError, authStatus, isValidatingClient, isCheckingAuth]);
+    }, [validationParams, clientValidation, validationError, hasSession, isValidatingClient]);
 
     // Handle redirect to login in an effect
     useEffect(() => {

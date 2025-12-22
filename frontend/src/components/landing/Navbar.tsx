@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Menu, X } from "lucide-react";
 import Button from "@/authly/components/ui/Button";
 import { useAuthStatus } from "@/authly/lib/hooks/useAuth";
+import { loginWithRedirect } from "@/authly/lib/oidc";
 
 /**
  * Renders the top navigation bar with responsive layout, scroll-aware styling, mobile collapse behavior, and authentication-aware CTAs.
@@ -88,7 +89,7 @@ export default function Navbar() {
                                 </Button>
                             ) : (
                                 <>
-                                    <Button href="/login" variant="ghost" size="sm">
+                                    <Button onClick={() => loginWithRedirect()} variant="ghost" size="sm">
                                         SIGN IN
                                     </Button>
                                     <Button href="/register" variant="primary" size="sm">
@@ -147,11 +148,13 @@ export default function Navbar() {
                             ) : (
                                 <>
                                     <Button
-                                        href="/login"
+                                        onClick={() => {
+                                            loginWithRedirect();
+                                            setIsOpen(false);
+                                        }}
                                         variant="ghost"
                                         size="sm"
                                         fullWidth
-                                        onClick={() => setIsOpen(false)}
                                     >
                                         SIGN IN
                                     </Button>

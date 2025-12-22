@@ -6,7 +6,7 @@ import {
     type RegisterResponse,
 } from "./schemas/auth/register";
 import { loginRequestSchema, loginResponseSchema, type LoginRequest, type LoginResponse } from "./schemas/auth/login";
-import { meResponseSchema, type MeResponse } from "./schemas/auth/me";
+import { type MeResponse } from "./schemas/auth/me";
 import {
     validateAuthorizationRequestResponseSchema,
     confirmAuthorizationRequestSchema,
@@ -109,27 +109,56 @@ export async function register(data: RegisterRequest): Promise<RegisterResponse>
 }
 
 /**
- * Fetches the current authenticated user's profile from the backend and returns a validated response.
- *
- * @returns A `MeResponse` containing the user's profile under `data` when successful; otherwise a `MeResponse` with `success: false` and an `error` string describing the failure—either `redirect_occurred`, the backend-provided error, or `unknown_error`.
+ * Fetches the current authenticated user's profile from the OIDC UserInfo endpoint.
+ * Requires a valid access token in LocalStorage.
  */
-export async function getMe(): Promise<MeResponse> {
-    return handleAuthRequest(
-        () =>
-            GeneralClient.get<{
-                user: {
-                    id: string;
-                    username: string;
-                    first_name: string;
-                    last_name: string;
-                    email: string | null;
-                    is_active: boolean;
-                    created_at: string;
-                    updated_at: string;
-                };
-            }>("/auth/me"),
-        meResponseSchema,
-    );
+export async function getUserInfo(): Promise<MeResponse> {
+    const response = await GeneralClient.get<{
+        sub: string;
+        name?: string;
+        preferred_username?: string;
+        email?: string;
+        given_name?: string;
+        family_name?: string;
+    }>("/oauth/userinfo");
+
+    if (!response.success) {
+        return {
+            success: false,
+            error: response.error || "unknown_error",
+        };
+    }
+
+    // Map OIDC claims to MeResponse format
+    return {
+        success: true,
+        data: {
+            user: {
+                id: response.data.sub,
+                username: response.data.preferred_username || "",
+                first_name: response.data.given_name || "",
+                last_name: response.data.family_name || "",
+                email: response.data.email || null,
+                is_active: true, // UserInfo endpoint only works for active users
+                created_at: "", // Not returned by UserInfo
+                updated_at: "", // Not returned by UserInfo
+            },
+        },
+        message: "User info fetched successfully",
+    };
+}
+
+/**
+ * Checks if the user has a valid session with the Identity Provider (Backend) via cookie.
+ * Does NOT check for OIDC access token.
+ */
+export async function checkIdPSession(): Promise<boolean> {
+    try {
+        const response = await GeneralClient.get("/auth/me");
+        return response.success;
+    } catch {
+        return false;
+    }
 }
 
 /**
@@ -167,7 +196,7 @@ export async function checkAuthStatus(): Promise<{
     user_id?: string;
 }> {
     try {
-        const response = await getMe();
+        const response = await getUserInfo();
         if (response.success) {
             return {
                 authenticated: true,

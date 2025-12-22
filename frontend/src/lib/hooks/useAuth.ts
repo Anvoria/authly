@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { login, register, getMe, checkAuthStatus } from "@/authly/lib/api";
+import { login, register, getUserInfo, checkAuthStatus } from "@/authly/lib/api";
 import { LoginRequest } from "@/authly/lib/schemas/auth/login";
 import { RegisterRequest } from "@/authly/lib/schemas/auth/register";
 
@@ -17,7 +17,7 @@ export const authKeys = {
 export function useMe() {
     return useQuery({
         queryKey: authKeys.me(),
-        queryFn: getMe,
+        queryFn: getUserInfo,
         retry: false,
     });
 }

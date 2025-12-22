@@ -5,9 +5,9 @@ import { Suspense, useState, useEffect } from "react";
 import AuthorizeLayout from "@/authly/components/authorize/AuthorizeLayout";
 import Input from "@/authly/components/ui/Input";
 import Button from "@/authly/components/ui/Button";
-import { isApiError } from "@/authly/lib/api";
+import { isApiError, checkIdPSession } from "@/authly/lib/api";
 import { loginRequestSchema, type LoginRequest } from "@/authly/lib/schemas/auth/login";
-import { generateCodeVerifier, generateCodeChallenge } from "@/authly/lib/oidc";
+import { generateCodeVerifier, generateCodeChallenge, loginWithRedirect } from "@/authly/lib/oidc";
 import LocalStorageTokenService from "@/authly/lib/globals/client/LocalStorageTokenService";
 import { useLogin, useMe } from "@/authly/lib/hooks/useAuth";
 
@@ -40,6 +40,8 @@ function LoginPageContent() {
     const loginMutation = useLogin();
 
     useEffect(() => {
+        if (isCheckingAuth) return;
+
         if (meResponse?.success) {
             const oidcParams = searchParams.get("oidc_params");
             if (oidcParams) {
@@ -68,14 +70,29 @@ function LoginPageContent() {
                         router.push("/authorize?" + oidcParams);
                     }
                 };
-                handleOidcRedirect().catch((error) => {
-                    console.error("OIDC redirect failed:", error);
-                });
+                handleOidcRedirect();
             } else {
                 router.push("/");
             }
+            return;
         }
-    }, [meResponse, router, searchParams]);
+
+        const checkSession = async () => {
+            const hasSession = await checkIdPSession();
+            if (hasSession) {
+                const oidcParams = searchParams.get("oidc_params");
+                if (oidcParams) {
+                    loginWithRedirect();
+                } else {
+                    loginWithRedirect();
+                }
+            }
+        };
+
+        if (!loginMutation.isPending) {
+            checkSession();
+        }
+    }, [meResponse, isCheckingAuth, router, searchParams, loginMutation.isPending]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
