@@ -128,17 +128,27 @@ func (r *repository) DeletePermission(id string) error {
 }
 
 // CreateUserPermission creates or updates a user permission
-// On conflict with the unique constraint (user_id, service_id, resource),
-// it updates the bitmask and permission_v columns.
 func (r *repository) CreateUserPermission(userPerm *UserPermission) error {
-	return r.db.Clauses(clause.OnConflict{
-		Columns: []clause.Column{
-			{Name: "user_id"},
-			{Name: "service_id"},
-			{Name: "resource"},
-		},
-		DoUpdates: clause.AssignmentColumns([]string{"bitmask", "permission_v", "updated_at"}),
-	}).Create(userPerm).Error
+	// Using raw SQL to handle the functional unique index on COALESCE(resource, '')
+	// GORM's Clauses/OnConflict doesn't easily support functional indexes without raw SQL.
+	query := `
+		INSERT INTO user_permissions (user_id, service_id, resource, bitmask, permission_v, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, NOW(), NOW())
+		ON CONFLICT (user_id, service_id, COALESCE(resource, ''))
+		DO UPDATE SET 
+			bitmask = EXCLUDED.bitmask, 
+			permission_v = EXCLUDED.permission_v, 
+			updated_at = NOW()
+		RETURNING id, created_at, updated_at
+	`
+
+	return r.db.Raw(query,
+		userPerm.UserID,
+		userPerm.ServiceID,
+		userPerm.Resource,
+		userPerm.Bitmask,
+		userPerm.PermissionV,
+	).Scan(userPerm).Error
 }
 
 // FindUserPermission gets a user's permission for a specific service and resource
