@@ -129,25 +129,26 @@ func (r *repository) DeletePermission(id string) error {
 
 // CreateUserPermission creates or updates a user permission
 func (r *repository) CreateUserPermission(userPerm *UserPermission) error {
-	var existing UserPermission
-	query := r.db.Where("user_id = ? AND service_id = ?", userPerm.UserID, userPerm.ServiceID)
+	// Using raw SQL to handle the functional unique index on COALESCE(resource, '')
+	// GORM's Clauses/OnConflict doesn't easily support functional indexes without raw SQL.
+	query := `
+		INSERT INTO user_permissions (user_id, service_id, resource, bitmask, permission_v, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, NOW(), NOW())
+		ON CONFLICT (user_id, service_id, COALESCE(resource, ''))
+		DO UPDATE SET 
+			bitmask = EXCLUDED.bitmask, 
+			permission_v = EXCLUDED.permission_v, 
+			updated_at = NOW()
+		RETURNING id, created_at, updated_at
+	`
 
-	if userPerm.Resource == nil {
-		query = query.Where("resource IS NULL")
-	} else {
-		query = query.Where("resource = ?", *userPerm.Resource)
-	}
-
-	err := query.First(&existing).Error
-	switch err {
-	case nil:
-		userPerm.ID = existing.ID
-		return r.db.Save(userPerm).Error
-	case gorm.ErrRecordNotFound:
-		return r.db.Create(userPerm).Error
-	default:
-		return err
-	}
+	return r.db.Raw(query,
+		userPerm.UserID,
+		userPerm.ServiceID,
+		userPerm.Resource,
+		userPerm.Bitmask,
+		userPerm.PermissionV,
+	).Scan(userPerm).Error
 }
 
 // FindUserPermission gets a user's permission for a specific service and resource

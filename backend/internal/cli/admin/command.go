@@ -219,7 +219,10 @@ func (c *Command) runInitRoot(args []string) error {
 	rootUser, err := userRepo.FindByEmail(*email)
 	if err != nil {
 		slog.Info("Creating root user...")
-		hashedPassword, _ := user.HashPassword(*password)
+		hashedPassword, err := user.HashPassword(*password)
+		if err != nil {
+			return fmt.Errorf("failed to hash password: %w", err)
+		}
 		rootUser = &user.User{
 			Username: *username,
 			Email:    *email,
