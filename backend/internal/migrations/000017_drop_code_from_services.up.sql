@@ -1,0 +1,2 @@
+DROP INDEX IF EXISTS idx_services_code;
+ALTER TABLE services DROP COLUMN IF EXISTS code;

@@ -128,17 +128,26 @@ func (r *repository) DeletePermission(id string) error {
 }
 
 // CreateUserPermission creates or updates a user permission
-// On conflict with the unique constraint (user_id, service_id, resource),
-// it updates the bitmask and permission_v columns.
 func (r *repository) CreateUserPermission(userPerm *UserPermission) error {
-	return r.db.Clauses(clause.OnConflict{
-		Columns: []clause.Column{
-			{Name: "user_id"},
-			{Name: "service_id"},
-			{Name: "resource"},
-		},
-		DoUpdates: clause.AssignmentColumns([]string{"bitmask", "permission_v", "updated_at"}),
-	}).Create(userPerm).Error
+	var existing UserPermission
+	query := r.db.Where("user_id = ? AND service_id = ?", userPerm.UserID, userPerm.ServiceID)
+
+	if userPerm.Resource == nil {
+		query = query.Where("resource IS NULL")
+	} else {
+		query = query.Where("resource = ?", *userPerm.Resource)
+	}
+
+	err := query.First(&existing).Error
+	switch err {
+	case nil:
+		userPerm.ID = existing.ID
+		return r.db.Save(userPerm).Error
+	case gorm.ErrRecordNotFound:
+		return r.db.Create(userPerm).Error
+	default:
+		return err
+	}
 }
 
 // FindUserPermission gets a user's permission for a specific service and resource
