@@ -170,6 +170,12 @@ func generateKey(keysPath string) {
 	fmt.Printf("  Key size:    %d bits\n", *bits)
 }
 
+// listKeys prints information about the RSA keys found in keysPath and indicates which key is active.
+// 
+// It reports and returns early when the path does not exist or is not a directory, or when keys cannot
+// be loaded. If keys are present, it prints each key's full KID (marking the active key), the RSA key
+// size in bits, and the expected private/public PEM filenames (private-<kid>.pem and public-<kid>.pem).
+// Finally, it prints the provided activeKID.
 func listKeys(keysPath, activeKID string) {
 	// Check if directory exists
 	info, err := os.Stat(keysPath)

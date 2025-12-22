@@ -77,7 +77,8 @@ type OIDCError struct {
 
 // MapErrorToOIDC maps an internal domain error to a standardized OIDC protocol error.
 // MapErrorToOIDC maps internal domain errors to their corresponding OIDC error responses.
-// It returns an OIDCError containing the standard OIDC error code, a client-facing description, and an HTTP status code; unrecognized errors map to `server_error` with HTTP 500.
+// MapErrorToOIDC maps an internal domain error to a standardized OIDC protocol error.
+// It returns an OIDCError with the OIDC error code, a client-facing description, and the corresponding HTTP status; unrecognized errors map to ErrorCodeServerError with HTTP 500.
 func MapErrorToOIDC(err error) OIDCError {
 	switch err {
 	case ErrInvalidClientID:
