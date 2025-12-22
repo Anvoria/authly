@@ -154,7 +154,11 @@ func (s *service) DeleteRole(id string) error {
 // AssignRole assigns a role to a user, overwriting their current role for that service
 func (s *service) AssignRole(userID, roleID string) error {
 	return s.db.Transaction(func(tx *gorm.DB) error {
-		txSvc := s.WithTx(tx).(*service)
+		txService := s.WithTx(tx)
+		txSvc, ok := txService.(*service)
+		if !ok {
+			return fmt.Errorf("internal error: failed to cast service")
+		}
 
 		role, err := txSvc.repo.FindByID(roleID)
 		if err != nil {
