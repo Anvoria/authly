@@ -162,8 +162,10 @@ func generateKey(keysPath, kid string, bits int) error {
 	if err != nil {
 		return err
 	}
-	defer fPriv.Close()
 	if err := pem.Encode(fPriv, privateKeyPEM); err != nil {
+		return err
+	}
+	if err := fPriv.Close(); err != nil {
 		return err
 	}
 
@@ -179,7 +181,9 @@ func generateKey(keysPath, kid string, bits int) error {
 	if err != nil {
 		return err
 	}
-	defer fPub.Close()
+	if err := fPub.Close(); err != nil {
+		return err
+	}
 	if err := pem.Encode(fPub, publicKeyPEM); err != nil {
 		return err
 	}
