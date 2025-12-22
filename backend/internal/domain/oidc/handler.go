@@ -152,6 +152,10 @@ func (h *Handler) Token(c *fiber.Ctx) error {
 	switch req.GrantType {
 	case "refresh_token":
 		if req.RefreshToken == "" {
+			req.RefreshToken = c.Cookies("session")
+		}
+
+		if req.RefreshToken == "" {
 			return utils.OIDCErrorResponse(c, ErrorCodeInvalidRequest, "refresh_token is required")
 		}
 
