@@ -103,7 +103,7 @@ func (c *Command) runInitRoot(args []string) error {
 			Name:         "Authly Dashboard",
 			Description:  "System management dashboard",
 			ClientID:     svc.DefaultAuthlyClientID,
-			ClientSecret: uuid.New().String(), // Generate random secret
+			ClientSecret: "",
 			AllowedScopes: []string{
 				"openid",
 				"profile",
