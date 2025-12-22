@@ -30,7 +30,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
                     </label>
                 )}
 
-                {description && <p className="text-xs text-white/60">{description}</p>}
+                {description && <p className="text-xs text-white/60 ml-1">{description}</p>}
 
                 <div className={cn("relative", disabled && "opacity-50")}>
                     {prefix && (
