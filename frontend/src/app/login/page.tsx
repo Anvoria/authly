@@ -203,12 +203,17 @@ function LoginPageContent() {
                 <div className="pt-2 border-t border-white/5">
                     <p className="text-center text-sm text-white/50 mt-2">
                         Don&apos;t have an account?{" "}
-                        <a
-                            href={`/register${searchParams.get("oidc_params") ? `?oidc_params=${encodeURIComponent(searchParams.get("oidc_params")!)}` : ""}`}
-                            className="text-white/80 hover:text-white font-medium underline underline-offset-4 transition-colors duration-200"
-                        >
-                            Sign Up
-                        </a>
+                        {(() => {
+                            const oidcParams = searchParams.get("oidc_params");
+                            return (
+                                <a
+                                    href={`/register${oidcParams ? `?oidc_params=${encodeURIComponent(oidcParams)}` : ""}`}
+                                    className="text-white/80 hover:text-white font-medium underline underline-offset-4 transition-colors duration-200"
+                                >
+                                    Sign Up
+                                </a>
+                            );
+                        })()}
                     </p>
                 </div>
             </div>
