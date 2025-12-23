@@ -245,7 +245,11 @@ func listKeys(keysPath, activeKID string) error {
 				fmt.Printf("    Private:  private-%s.pem\n", keyID)
 				fmt.Printf("    Public:   public-%s.pem\n", keyID)
 				fmt.Println()
+			} else {
+				fmt.Fprintf(os.Stderr, "  %s: skipped (not an RSA key)\n", kid)
 			}
+		} else {
+			fmt.Fprintf(os.Stderr, "  %s: skipped (export failed: %v)\n", kid, err)
 		}
 	}
 
