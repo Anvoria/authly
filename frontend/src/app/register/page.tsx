@@ -55,7 +55,7 @@ function RegisterPageContent() {
                             const challenge = await generateCodeChallenge(verifier);
 
                             params.set("code_challenge", challenge);
-                            params.set("code_challenge_method", "S256");
+                            params.set("code_challenge_method", "s256");
 
                             LocalStorageTokenService.setOidcCodeVerifier(verifier);
                         }
