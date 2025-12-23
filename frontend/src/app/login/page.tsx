@@ -65,9 +65,10 @@ function LoginPageContent() {
                     router.push(authorizeUrl.toString());
                 } catch (error) {
                     console.error("Failed to process OIDC parameters:", error);
-                    setApiError("Failed to process login parameters. Redirecting to home...");
+                    setApiError("Failed to process login parameters. Please try again or return to home.");
                     LocalStorageTokenService.setOidcCodeVerifier("");
-                    router.push("/");
+                    setIsCheckingSession(false);
+                    setIsRedirecting(false);
                 }
             };
             await handleOidcRedirect();
