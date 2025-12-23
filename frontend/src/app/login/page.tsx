@@ -36,6 +36,7 @@ function LoginPageContent() {
     const [errors, setErrors] = useState<Partial<Record<keyof LoginFormData, string>>>({});
     const [apiError, setApiError] = useState<string | null>(null);
     const [isCheckingSession, setIsCheckingSession] = useState(true);
+    const [isRedirecting, setIsRedirecting] = useState(false);
 
     const loginMutation = useLogin();
 
@@ -113,7 +114,13 @@ function LoginPageContent() {
         loginMutation.mutate(requestData, {
             onSuccess: async (response) => {
                 if (response.success) {
-                    await performRedirect();
+                    setIsRedirecting(true);
+                    try {
+                        await performRedirect();
+                    } catch (error) {
+                        console.error("Redirect failed:", error);
+                        setIsRedirecting(false);
+                    }
                 } else {
                     setApiError(response.error || "Login failed");
                 }
@@ -141,7 +148,7 @@ function LoginPageContent() {
         }
     };
 
-    const isLoading = loginMutation.isPending;
+    const isLoading = loginMutation.isPending || isRedirecting;
 
     if (isCheckingSession) {
         return (
@@ -188,7 +195,7 @@ function LoginPageContent() {
 
                     <div className="pt-1">
                         <Button fullWidth variant="primary" type="submit" disabled={isLoading}>
-                            {isLoading ? "Signing in..." : "Sign In"}
+                            {isLoading ? (isRedirecting ? "Redirecting..." : "Signing in...") : "Sign In"}
                         </Button>
                     </div>
                 </form>
