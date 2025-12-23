@@ -36,7 +36,7 @@ export default function ProfilePage() {
         );
     }
 
-    if (!response?.success) {
+    if (!response?.success || !response?.data?.user) {
         return null;
     }
 
