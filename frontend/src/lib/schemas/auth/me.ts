@@ -18,7 +18,7 @@ export const meSuccessResponseSchema = z.object({
                 updated_at: z.string(),
             })
             .loose(),
-        permissions: z.record(z.string(), z.number()).optional(),
+        permissions: z.record(z.string(), z.number().int().min(0).max(Number.MAX_SAFE_INTEGER)).optional(),
     }),
     message: z.string(),
 });
