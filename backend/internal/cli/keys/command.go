@@ -186,7 +186,9 @@ func generateKey(keysPath, kid string, bits int) error {
 		return err
 	}
 	if err := pem.Encode(fPub, publicKeyPEM); err != nil {
-		fPub.Close()
+		if cerr := fPub.Close(); cerr != nil {
+			return fmt.Errorf("failed to encode public key: %w (additionally, failed to close file: %v)", err, cerr)
+		}
 		return err
 	}
 	if err := fPub.Close(); err != nil {
