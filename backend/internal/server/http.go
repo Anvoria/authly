@@ -3,6 +3,7 @@ package server
 import (
 	"log/slog"
 	"os"
+	"strings"
 
 	"github.com/Anvoria/authly/internal/cache"
 	"github.com/Anvoria/authly/internal/config"
@@ -25,7 +26,7 @@ func Start(cfg *config.Config) error {
 
 	// Configure CORS
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:3000,http://localhost:8000",
+		AllowOrigins:     strings.Join(cfg.Server.AllowedOrigins, ","),
 		AllowMethods:     "GET,POST,PUT,DELETE,PATCH,OPTIONS",
 		AllowHeaders:     "Origin,Content-Type,Accept,Authorization",
 		AllowCredentials: true,
