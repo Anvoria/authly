@@ -6,7 +6,7 @@ import {
     type RegisterResponse,
 } from "./schemas/auth/register";
 import { loginRequestSchema, loginResponseSchema, type LoginRequest, type LoginResponse } from "./schemas/auth/login";
-import { type MeResponse } from "./schemas/auth/me";
+import { meResponseSchema, type MeResponse } from "./schemas/auth/me";
 import {
     validateAuthorizationRequestResponseSchema,
     confirmAuthorizationRequestSchema,
@@ -107,6 +107,28 @@ export async function register(data: RegisterRequest): Promise<RegisterResponse>
         () => GeneralClient.post<{ user: { id: string } }>("/auth/register", validatedData),
         registerResponseSchema,
     );
+}
+
+/**
+ * Fetch the current user's profile and permissions from the internal /auth/me endpoint.
+ *
+ * @returns A `MeResponse` containing user details and permissions.
+ */
+export async function getMe(): Promise<MeResponse> {
+    const response = await GeneralClient.get<unknown>("/auth/me");
+
+    if (!response.success) {
+        return {
+            success: false,
+            error: response.error || "unknown_error",
+        };
+    }
+
+    return meResponseSchema.parse({
+        success: true,
+        data: response.data,
+        message: response.message || "User info fetched successfully",
+    });
 }
 
 /**
