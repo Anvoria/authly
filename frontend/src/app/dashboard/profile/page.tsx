@@ -10,7 +10,7 @@ import Button from "@/authly/components/ui/Button";
 /**
  * Render the profile page for the current user and enforce access control.
  *
- * Displays a read-only view of the user's identity and account information; if the user is not authenticated the component redirects to "/login" and while user data is being fetched it renders a full-screen loading spinner.
+ * Displays a read-only view of the user's identity and account information; if the user is not authenticated the component redirects to "/auth/login" and while user data is being fetched it renders a full-screen loading spinner.
  *
  * @returns The React element representing the profile page for the current user.
  */
@@ -20,7 +20,7 @@ export default function ProfilePage() {
 
     useEffect(() => {
         if (!isLoading && !response?.success) {
-            router.push("/login");
+            router.push("/auth/login");
         }
     }, [isLoading, response, router]);
 

@@ -32,7 +32,7 @@ export default function AuthlyAdminGuard({
     useEffect(() => {
         if (!isLoading) {
             if (!isAuthenticated) {
-                router.push("/login");
+                router.push("/auth/login");
                 return;
             }
 

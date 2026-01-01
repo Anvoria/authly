@@ -92,7 +92,7 @@ export default function Navbar() {
                                     <Button onClick={() => loginWithRedirect()} variant="ghost" size="sm">
                                         SIGN IN
                                     </Button>
-                                    <Button href="/register" variant="primary" size="sm">
+                                    <Button href="/auth/register" variant="primary" size="sm">
                                         GET STARTED
                                     </Button>
                                 </>
@@ -159,7 +159,7 @@ export default function Navbar() {
                                         SIGN IN
                                     </Button>
                                     <Button
-                                        href="/register"
+                                        href="/auth/register"
                                         variant="primary"
                                         size="sm"
                                         fullWidth

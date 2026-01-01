@@ -90,7 +90,7 @@ function CallbackPageContent() {
                     </div>
 
                     <div className="pt-1">
-                        <Button fullWidth variant="primary" onClick={() => router.push("/login")}>
+                        <Button fullWidth variant="primary" onClick={() => router.push("/auth/login")}>
                             Back to Login
                         </Button>
                     </div>

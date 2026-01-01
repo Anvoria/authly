@@ -15,7 +15,7 @@ export default function AuthGuard({
     children,
     requiredPermissions,
     requireAll = false,
-    redirectTo = "/login",
+    redirectTo = "/auth/login",
 }: AuthGuardProps) {
     const { isAuthenticated, isLoading, permissions } = useAuth();
     const router = useRouter();
