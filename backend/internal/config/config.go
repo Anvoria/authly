@@ -27,10 +27,17 @@ type AppConfig struct {
 
 // ServerConfig holds server-specific configuration
 type ServerConfig struct {
-	Host           string   `yaml:"host"`
-	Port           int      `yaml:"port"`
-	Domain         string   `yaml:"domain"`
-	AllowedOrigins []string `yaml:"allowed_origins"`
+	Host           string          `yaml:"host"`
+	Port           int             `yaml:"port"`
+	Domain         string          `yaml:"domain"`
+	AllowedOrigins []string        `yaml:"allowed_origins"`
+	RateLimit      RateLimitConfig `yaml:"rate_limit"`
+}
+
+// RateLimitConfig holds rate limiting configuration
+type RateLimitConfig struct {
+	Max        int `yaml:"max"`
+	Expiration int `yaml:"expiration"`
 }
 
 // AuthConfig holds auth-specific configuration

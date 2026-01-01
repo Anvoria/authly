@@ -9,6 +9,9 @@ server:
   allowed_origins:
     - "http://localhost:3000"
     - "http://localhost:8000"
+  rate_limit:
+    max: 100
+    expiration: 60
 
 auth:
   keys_path: "keys"
