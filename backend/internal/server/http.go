@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"log/slog"
 	"os"
 	"strings"
@@ -24,6 +25,18 @@ func Start(cfg *config.Config) error {
 
 	app := fiber.New(fiber.Config{
 		BodyLimit: 10 * 1024 * 1024, // 10MB
+		ErrorHandler: func(c *fiber.Ctx, err error) error {
+			code := fiber.StatusInternalServerError
+			message := "Internal Server Error"
+
+			var e *fiber.Error
+			if errors.As(err, &e) {
+				code = e.Code
+				message = e.Message
+			}
+
+			return utils.ErrorResponse(c, message, code)
+		},
 	})
 
 	// Use Helmet for security headers
