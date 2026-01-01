@@ -58,7 +58,11 @@ func Start(cfg *config.Config) error {
 			return c.IP()
 		},
 		LimitReached: func(c *fiber.Ctx) error {
-			return utils.ErrorResponse(c, "Too many requests, please try again later.", fiber.StatusTooManyRequests)
+			return utils.ErrorResponse(c, utils.NewAPIError(
+				"TOO_MANY_REQUESTS",
+				"Too many requests, please try again later.",
+				fiber.StatusTooManyRequests,
+			))
 		},
 	}))
 

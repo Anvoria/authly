@@ -29,7 +29,11 @@ func NewHandler(s AuthService, userService user.Service, permissionService permi
 func (h *Handler) Login(c *fiber.Ctx) error {
 	var req user.LoginRequest
 	if err := c.BodyParser(&req); err != nil {
-		return utils.ErrorResponse(c, ErrInvalidBody.Error(), fiber.StatusBadRequest)
+		return utils.ErrorResponse(c, utils.NewAPIError(
+			"INVALID_BODY",
+			"Invalid request body format",
+			fiber.StatusBadRequest,
+		))
 	}
 
 	res, err := h.authService.Login(
@@ -40,7 +44,11 @@ func (h *Handler) Login(c *fiber.Ctx) error {
 	)
 
 	if err != nil {
-		return utils.ErrorResponse(c, err.Error(), fiber.StatusUnauthorized)
+		return utils.ErrorResponse(c, utils.NewAPIError(
+			"INVALID_CREDENTIALS",
+			"Invalid username or password",
+			fiber.StatusUnauthorized,
+		))
 	}
 
 	c.Cookie(&fiber.Cookie{
@@ -61,12 +69,20 @@ func (h *Handler) Login(c *fiber.Ctx) error {
 func (h *Handler) Register(c *fiber.Ctx) error {
 	var req user.RegisterRequest
 	if err := c.BodyParser(&req); err != nil {
-		return utils.ErrorResponse(c, ErrInvalidBody.Error(), fiber.StatusBadRequest)
+		return utils.ErrorResponse(c, utils.NewAPIError(
+			"INVALID_BODY",
+			"Invalid request body format",
+			fiber.StatusBadRequest,
+		))
 	}
 
 	res, err := h.authService.Register(req)
 	if err != nil {
-		return utils.ErrorResponse(c, err.Error(), fiber.StatusBadRequest)
+		return utils.ErrorResponse(c, utils.NewAPIError(
+			"REGISTRATION_FAILED",
+			err.Error(),
+			fiber.StatusBadRequest,
+		))
 	}
 
 	return utils.SuccessResponse(c, fiber.Map{

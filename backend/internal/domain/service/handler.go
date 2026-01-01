@@ -26,25 +26,22 @@ func (h *Handler) CreateService(c *fiber.Ctx) error {
 	}
 
 	if err := c.BodyParser(&req); err != nil {
-		return utils.ErrorResponse(c, "invalid_body", fiber.StatusBadRequest)
+		return utils.ErrorResponse(c, utils.NewAPIError("INVALID_BODY", "Invalid request body", fiber.StatusBadRequest))
 	}
 
 	if req.Slug == "" {
-		return utils.ErrorResponse(c, "slug is required", fiber.StatusBadRequest)
+		return utils.ErrorResponse(c, utils.NewAPIError("VALIDATION_ERROR", "Slug is required", fiber.StatusBadRequest))
 	}
 	if req.Name == "" {
-		return utils.ErrorResponse(c, "name is required", fiber.StatusBadRequest)
+		return utils.ErrorResponse(c, utils.NewAPIError("VALIDATION_ERROR", "Name is required", fiber.StatusBadRequest))
 	}
 
 	svc, err := h.serviceService.Create(req.Slug, req.Name, req.Description, req.Domain, req.RedirectURIs, req.AllowedScopes)
 	if err != nil {
-		if err == ErrServiceClientIDExists {
-			return utils.ErrorResponse(c, err.Error(), fiber.StatusConflict)
+		if err == ErrServiceClientIDExists || err == ErrServiceDomainExists {
+			return utils.ErrorResponse(c, utils.NewAPIError("DUPLICATE_RESOURCE", err.Error(), fiber.StatusConflict))
 		}
-		if err == ErrServiceDomainExists {
-			return utils.ErrorResponse(c, err.Error(), fiber.StatusConflict)
-		}
-		return utils.ErrorResponse(c, err.Error(), fiber.StatusInternalServerError)
+		return utils.ErrorResponse(c, utils.NewAPIError("INTERNAL_SERVER_ERROR", err.Error(), fiber.StatusInternalServerError))
 	}
 
 	return utils.SuccessResponse(c, fiber.Map{
@@ -56,15 +53,15 @@ func (h *Handler) CreateService(c *fiber.Ctx) error {
 func (h *Handler) GetService(c *fiber.Ctx) error {
 	id := c.Params("id")
 	if id == "" {
-		return utils.ErrorResponse(c, "id is required", fiber.StatusBadRequest)
+		return utils.ErrorResponse(c, utils.NewAPIError("VALIDATION_ERROR", "ID is required", fiber.StatusBadRequest))
 	}
 
 	svc, err := h.serviceService.FindByID(id)
 	if err != nil {
 		if err == ErrServiceNotFound {
-			return utils.ErrorResponse(c, err.Error(), fiber.StatusNotFound)
+			return utils.ErrorResponse(c, utils.NewAPIError("RESOURCE_NOT_FOUND", err.Error(), fiber.StatusNotFound))
 		}
-		return utils.ErrorResponse(c, err.Error(), fiber.StatusInternalServerError)
+		return utils.ErrorResponse(c, utils.NewAPIError("INTERNAL_SERVER_ERROR", err.Error(), fiber.StatusInternalServerError))
 	}
 
 	return utils.SuccessResponse(c, fiber.Map{
@@ -76,15 +73,15 @@ func (h *Handler) GetService(c *fiber.Ctx) error {
 func (h *Handler) GetServiceByClientID(c *fiber.Ctx) error {
 	clientID := c.Params("client_id")
 	if clientID == "" {
-		return utils.ErrorResponse(c, "client_id is required", fiber.StatusBadRequest)
+		return utils.ErrorResponse(c, utils.NewAPIError("VALIDATION_ERROR", "client_id is required", fiber.StatusBadRequest))
 	}
 
 	svc, err := h.serviceService.FindByClientID(clientID)
 	if err != nil {
 		if err == ErrServiceNotFound {
-			return utils.ErrorResponse(c, err.Error(), fiber.StatusNotFound)
+			return utils.ErrorResponse(c, utils.NewAPIError("RESOURCE_NOT_FOUND", err.Error(), fiber.StatusNotFound))
 		}
-		return utils.ErrorResponse(c, err.Error(), fiber.StatusInternalServerError)
+		return utils.ErrorResponse(c, utils.NewAPIError("INTERNAL_SERVER_ERROR", err.Error(), fiber.StatusInternalServerError))
 	}
 
 	return utils.SuccessResponse(c, fiber.Map{
@@ -106,7 +103,7 @@ func (h *Handler) ListServices(c *fiber.Ctx) error {
 	}
 
 	if err != nil {
-		return utils.ErrorResponse(c, err.Error(), fiber.StatusInternalServerError)
+		return utils.ErrorResponse(c, utils.NewAPIError("INTERNAL_SERVER_ERROR", err.Error(), fiber.StatusInternalServerError))
 	}
 
 	responses := make([]*ServiceResponse, len(services))
@@ -124,7 +121,7 @@ func (h *Handler) ListServices(c *fiber.Ctx) error {
 func (h *Handler) UpdateService(c *fiber.Ctx) error {
 	id := c.Params("id")
 	if id == "" {
-		return utils.ErrorResponse(c, "id is required", fiber.StatusBadRequest)
+		return utils.ErrorResponse(c, utils.NewAPIError("VALIDATION_ERROR", "ID is required", fiber.StatusBadRequest))
 	}
 
 	var req struct {
@@ -135,18 +132,18 @@ func (h *Handler) UpdateService(c *fiber.Ctx) error {
 	}
 
 	if err := c.BodyParser(&req); err != nil {
-		return utils.ErrorResponse(c, "invalid_body", fiber.StatusBadRequest)
+		return utils.ErrorResponse(c, utils.NewAPIError("INVALID_BODY", "Invalid request body", fiber.StatusBadRequest))
 	}
 
 	svc, err := h.serviceService.Update(id, req.Name, req.Description, req.Domain, req.Active)
 	if err != nil {
 		if err == ErrServiceNotFound {
-			return utils.ErrorResponse(c, err.Error(), fiber.StatusNotFound)
+			return utils.ErrorResponse(c, utils.NewAPIError("RESOURCE_NOT_FOUND", err.Error(), fiber.StatusNotFound))
 		}
 		if err == ErrCannotUpdateSystemService {
-			return utils.ErrorResponse(c, err.Error(), fiber.StatusForbidden)
+			return utils.ErrorResponse(c, utils.NewAPIError("FORBIDDEN", err.Error(), fiber.StatusForbidden))
 		}
-		return utils.ErrorResponse(c, err.Error(), fiber.StatusInternalServerError)
+		return utils.ErrorResponse(c, utils.NewAPIError("INTERNAL_SERVER_ERROR", err.Error(), fiber.StatusInternalServerError))
 	}
 
 	return utils.SuccessResponse(c, fiber.Map{
@@ -158,18 +155,18 @@ func (h *Handler) UpdateService(c *fiber.Ctx) error {
 func (h *Handler) DeleteService(c *fiber.Ctx) error {
 	id := c.Params("id")
 	if id == "" {
-		return utils.ErrorResponse(c, "id is required", fiber.StatusBadRequest)
+		return utils.ErrorResponse(c, utils.NewAPIError("VALIDATION_ERROR", "ID is required", fiber.StatusBadRequest))
 	}
 
 	err := h.serviceService.Delete(id)
 	if err != nil {
 		if err == ErrServiceNotFound {
-			return utils.ErrorResponse(c, err.Error(), fiber.StatusNotFound)
+			return utils.ErrorResponse(c, utils.NewAPIError("RESOURCE_NOT_FOUND", err.Error(), fiber.StatusNotFound))
 		}
 		if err == ErrCannotDeleteSystemService {
-			return utils.ErrorResponse(c, err.Error(), fiber.StatusForbidden)
+			return utils.ErrorResponse(c, utils.NewAPIError("FORBIDDEN", err.Error(), fiber.StatusForbidden))
 		}
-		return utils.ErrorResponse(c, err.Error(), fiber.StatusInternalServerError)
+		return utils.ErrorResponse(c, utils.NewAPIError("INTERNAL_SERVER_ERROR", err.Error(), fiber.StatusInternalServerError))
 	}
 
 	return utils.SuccessResponse(c, nil, "Service deleted successfully")
