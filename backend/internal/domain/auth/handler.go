@@ -6,18 +6,24 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
+	"github.com/Anvoria/authly/internal/domain/permission"
 	"github.com/Anvoria/authly/internal/domain/user"
 	"github.com/Anvoria/authly/internal/utils"
 )
 
 type Handler struct {
-	authService AuthService
-	userService user.Service
+	authService       AuthService
+	userService       user.Service
+	permissionService permission.ServiceInterface
 }
 
 // NewHandler creates a new Handler configured with the provided AuthService and user.Service.
-func NewHandler(s AuthService, userService user.Service) *Handler {
-	return &Handler{authService: s, userService: userService}
+func NewHandler(s AuthService, userService user.Service, permissionService permission.ServiceInterface) *Handler {
+	return &Handler{
+		authService:       s,
+		userService:       userService,
+		permissionService: permissionService,
+	}
 }
 
 func (h *Handler) Login(c *fiber.Ctx) error {
@@ -80,7 +86,13 @@ func (h *Handler) Me(c *fiber.Ctx) error {
 		return utils.ErrorResponse(c, "user_not_found", fiber.StatusNotFound)
 	}
 
+	permissions, err := h.permissionService.BuildScopes(identity.UserID)
+	if err != nil {
+		permissions = make(map[string]uint64)
+	}
+
 	return utils.SuccessResponse(c, fiber.Map{
-		"user": user.ToResponse(),
+		"user":        user.ToResponse(),
+		"permissions": permissions,
 	}, "User information retrieved successfully")
 }
