@@ -10,6 +10,7 @@ import (
 	"github.com/Anvoria/authly/internal/migrations"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/helmet"
 )
 
 // Start initializes logging, configures the Fiber app (including CORS), connects to the database and Redis, runs migrations, loads environment configuration, registers routes, and starts listening on the configured address.
@@ -18,6 +19,9 @@ func Start(cfg *config.Config) error {
 	initLogger(cfg.Logging.Level)
 
 	app := fiber.New()
+
+	// Use Helmet for security headers
+	app.Use(helmet.New())
 
 	// Configure CORS
 	app.Use(cors.New(cors.Config{
