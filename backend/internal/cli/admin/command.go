@@ -165,7 +165,7 @@ func (c *Command) runInitRoot(args []string) error {
 	for _, p := range systemPerms {
 		fullBitmask |= (1 << p.Bit)
 
-		existingPerms, _ := permRepo.FindPermissionsByServiceIDAndResource(systemService.ID.String(), nil)
+		existingPerms, _, _ := permRepo.FindPermissionsByServiceIDAndResource(systemService.ID.String(), nil, 1000, 0)
 		found := false
 		for _, ep := range existingPerms {
 			if ep.Bit == p.Bit {
