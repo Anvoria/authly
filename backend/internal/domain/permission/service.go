@@ -59,7 +59,7 @@ type ServiceInterface interface {
 
 	// Permission Management
 	CreatePermission(serviceID, name string, bit uint8, resource *string) (*Permission, error)
-	ListPermissions(serviceID string, limit, offset int) ([]*Permission, error)
+	ListPermissions(serviceID string, resource *string, limit, offset int) ([]*Permission, int64, error)
 	UpdatePermission(id, name string, active bool) (*Permission, error)
 	DeletePermission(id string) error
 }
@@ -411,7 +411,10 @@ func (s *serviceImpl) CreatePermission(serviceID, name string, bit uint8, resour
 	return perm, nil
 }
 
-func (s *serviceImpl) ListPermissions(serviceID string, limit, offset int) ([]*Permission, error) {
+func (s *serviceImpl) ListPermissions(serviceID string, resource *string, limit, offset int) ([]*Permission, int64, error) {
+	if resource != nil {
+		return s.repo.FindPermissionsByServiceIDAndResource(serviceID, resource, limit, offset)
+	}
 	return s.repo.FindPermissionsByServiceID(serviceID, limit, offset)
 }
 

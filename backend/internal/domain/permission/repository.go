@@ -11,8 +11,8 @@ type Repository interface {
 	// Permissions
 	CreatePermission(permission *Permission) error
 	FindPermissionByID(id string) (*Permission, error)
-	FindPermissionsByServiceID(serviceID string, limit, offset int) ([]*Permission, error)
-	FindPermissionsByServiceIDAndResource(serviceID string, resource *string) ([]*Permission, error)
+	FindPermissionsByServiceID(serviceID string, limit, offset int) ([]*Permission, int64, error)
+	FindPermissionsByServiceIDAndResource(serviceID string, resource *string, limit, offset int) ([]*Permission, int64, error)
 	FindActivePermissionsByServiceID(serviceID string) ([]*Permission, error)
 	FindActivePermissionsByServiceIDAndResource(serviceID string, resource *string) ([]*Permission, error)
 	UpdatePermission(permission *Permission) error
@@ -65,19 +65,26 @@ func (r *repository) FindPermissionByID(id string) (*Permission, error) {
 	return &permission, nil
 }
 
-// FindPermissionsByServiceID gets all permissions for a service
-func (r *repository) FindPermissionsByServiceID(serviceID string, limit, offset int) ([]*Permission, error) {
+// FindPermissionsByServiceID gets all permissions for a service with pagination
+func (r *repository) FindPermissionsByServiceID(serviceID string, limit, offset int) ([]*Permission, int64, error) {
 	var permissions []*Permission
-	if err := r.db.Where("service_id = ?", serviceID).Limit(limit).Offset(offset).Find(&permissions).Error; err != nil {
-		return nil, err
+	var count int64
+
+	if err := r.db.Model(&Permission{}).Where("service_id = ?", serviceID).Count(&count).Error; err != nil {
+		return nil, 0, err
 	}
-	return permissions, nil
+
+	if err := r.db.Where("service_id = ?", serviceID).Limit(limit).Offset(offset).Find(&permissions).Error; err != nil {
+		return nil, 0, err
+	}
+	return permissions, count, nil
 }
 
-// FindPermissionsByServiceIDAndResource gets all permissions for a service and resource
-func (r *repository) FindPermissionsByServiceIDAndResource(serviceID string, resource *string) ([]*Permission, error) {
+// FindPermissionsByServiceIDAndResource gets all permissions for a service and resource with pagination
+func (r *repository) FindPermissionsByServiceIDAndResource(serviceID string, resource *string, limit, offset int) ([]*Permission, int64, error) {
 	var permissions []*Permission
-	query := r.db.Where("service_id = ?", serviceID)
+	var count int64
+	query := r.db.Model(&Permission{}).Where("service_id = ?", serviceID)
 
 	if resource == nil {
 		query = query.Where("resource IS NULL")
@@ -85,10 +92,14 @@ func (r *repository) FindPermissionsByServiceIDAndResource(serviceID string, res
 		query = query.Where("resource = ?", *resource)
 	}
 
-	if err := query.Find(&permissions).Error; err != nil {
-		return nil, err
+	if err := query.Count(&count).Error; err != nil {
+		return nil, 0, err
 	}
-	return permissions, nil
+
+	if err := query.Limit(limit).Offset(offset).Find(&permissions).Error; err != nil {
+		return nil, 0, err
+	}
+	return permissions, count, nil
 }
 
 // FindActivePermissionsByServiceID gets all active permissions for a service
