@@ -85,6 +85,15 @@ func SetupRoutes(app *fiber.App, envConfig *config.Environment, cfg *config.Conf
 
 	authServiceRepoAdapter := auth.NewServiceRepositoryAdapter(serviceCache)
 
+	// Initialize Service Service (for management)
+	serviceService := svc.NewService(serviceRepo, serviceCache)
+
+	// Initialize Handlers
+	userAdminHandler := user.NewAdminHandler(userService)
+	roleHandler := role.NewHandler(roleService)
+	permissionHandler := perm.NewHandler(permissionService)
+	serviceHandler := svc.NewHandler(serviceService)
+
 	// Initialize OIDC repositories and services
 	authCodeRepo := oidc.NewRepository(database.DB)
 	oidcService := oidc.NewService(serviceRepo, authCodeRepo, authService, sessionService, permissionService, userService)
@@ -105,5 +114,43 @@ func SetupRoutes(app *fiber.App, envConfig *config.Environment, cfg *config.Conf
 	// Setup well-known endpoints
 	app.Get("/.well-known/jwks.json", auth.JWKSHandler(keyStore))
 	app.Get("/.well-known/openid-configuration", oidc.OpenIDConfigurationHandler(issuer))
+
+	// Admin Routes
+	adminGroup := api.Group("/admin")
+	adminGroup.Use(auth.AuthMiddleware(keyStore, authService, issuer, authServiceRepoAdapter))
+
+	// User Management
+	usersGroup := adminGroup.Group("/users")
+	usersGroup.Use(auth.RequirePermissionBit(svc.DefaultAuthlyClientID, perm.BitManageUsers))
+	usersGroup.Get("/", userAdminHandler.ListUsers)
+	usersGroup.Put("/:id", userAdminHandler.UpdateUser)
+	usersGroup.Delete("/:id", userAdminHandler.DeleteUser)
+
+	// Service Management
+	servicesGroup := adminGroup.Group("/services")
+	servicesGroup.Use(auth.RequirePermissionBit(svc.DefaultAuthlyClientID, perm.BitManageServices))
+	servicesGroup.Post("/", serviceHandler.CreateService)
+	servicesGroup.Get("/", serviceHandler.ListServices)
+	servicesGroup.Get("/:id", serviceHandler.GetService)
+	servicesGroup.Put("/:id", serviceHandler.UpdateService)
+	servicesGroup.Delete("/:id", serviceHandler.DeleteService)
+
+	// Permission Management
+	permsGroup := adminGroup.Group("/permissions")
+	permsGroup.Use(auth.RequirePermissionBit(svc.DefaultAuthlyClientID, perm.BitManagePermissions))
+	permsGroup.Post("/", permissionHandler.CreatePermission)
+	permsGroup.Get("/", permissionHandler.ListPermissions)
+	permsGroup.Put("/:id", permissionHandler.UpdatePermission)
+	permsGroup.Delete("/:id", permissionHandler.DeletePermission)
+
+	// Role Management
+	rolesGroup := adminGroup.Group("/roles")
+	rolesGroup.Use(auth.RequirePermissionBit(svc.DefaultAuthlyClientID, perm.BitManageRoles))
+	rolesGroup.Post("/", roleHandler.CreateRole)
+	rolesGroup.Get("/", roleHandler.GetRolesByService)
+	rolesGroup.Put("/:id", roleHandler.UpdateRole)
+	rolesGroup.Delete("/:id", roleHandler.DeleteRole)
+	rolesGroup.Post("/assign", roleHandler.AssignRole)
+
 	return nil
 }
