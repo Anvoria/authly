@@ -1,8 +1,6 @@
 package user
 
 import (
-	"strconv"
-
 	"github.com/Anvoria/authly/internal/utils"
 	"github.com/gofiber/fiber/v2"
 )
@@ -20,10 +18,10 @@ func (h *AdminHandler) ListUsers(c *fiber.Ctx) error {
 	limit := 10
 	offset := 0
 
-	if l, err := strconv.Atoi(c.Query("limit")); err == nil && l > 0 {
+	if l := c.QueryInt("limit"); l > 0 {
 		limit = l
 	}
-	if o, err := strconv.Atoi(c.Query("offset")); err == nil && o >= 0 {
+	if o := c.QueryInt("offset"); o >= 0 {
 		offset = o
 	}
 
