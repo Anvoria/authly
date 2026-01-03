@@ -11,7 +11,7 @@ type Repository interface {
 	// Permissions
 	CreatePermission(permission *Permission) error
 	FindPermissionByID(id string) (*Permission, error)
-	FindPermissionsByServiceID(serviceID string) ([]*Permission, error)
+	FindPermissionsByServiceID(serviceID string, limit, offset int) ([]*Permission, error)
 	FindPermissionsByServiceIDAndResource(serviceID string, resource *string) ([]*Permission, error)
 	FindActivePermissionsByServiceID(serviceID string) ([]*Permission, error)
 	FindActivePermissionsByServiceIDAndResource(serviceID string, resource *string) ([]*Permission, error)
@@ -66,9 +66,9 @@ func (r *repository) FindPermissionByID(id string) (*Permission, error) {
 }
 
 // FindPermissionsByServiceID gets all permissions for a service
-func (r *repository) FindPermissionsByServiceID(serviceID string) ([]*Permission, error) {
+func (r *repository) FindPermissionsByServiceID(serviceID string, limit, offset int) ([]*Permission, error) {
 	var permissions []*Permission
-	if err := r.db.Where("service_id = ?", serviceID).Find(&permissions).Error; err != nil {
+	if err := r.db.Where("service_id = ?", serviceID).Limit(limit).Offset(offset).Find(&permissions).Error; err != nil {
 		return nil, err
 	}
 	return permissions, nil

@@ -56,6 +56,12 @@ type ServiceInterface interface {
 	// HasServicePermission checks if a service has a specific permission bit for a target service and resource
 	// resource can be empty string for global service permissions
 	HasServicePermission(clientID, targetServiceID, resource string, bit uint8) (bool, error)
+
+	// Permission Management
+	CreatePermission(serviceID, name string, bit uint8, resource *string) (*Permission, error)
+	ListPermissions(serviceID string, limit, offset int) ([]*Permission, error)
+	UpdatePermission(id, name string, active bool) (*Permission, error)
+	DeletePermission(id string) error
 }
 
 // serviceImpl implements ServiceInterface
@@ -384,4 +390,46 @@ func (s *serviceImpl) HasServicePermission(clientID, targetServiceID, resource s
 		return false, err
 	}
 	return HasBit(bitmask, bit), nil
+}
+
+func (s *serviceImpl) CreatePermission(serviceID, name string, bit uint8, resource *string) (*Permission, error) {
+	serviceIDUUID, err := uuid.Parse(serviceID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid service ID: %w", err)
+	}
+
+	perm := &Permission{
+		ServiceID: serviceIDUUID,
+		Name:      name,
+		Bit:       bit,
+		Resource:  resource,
+		Active:    true,
+	}
+	if err := s.repo.CreatePermission(perm); err != nil {
+		return nil, err
+	}
+	return perm, nil
+}
+
+func (s *serviceImpl) ListPermissions(serviceID string, limit, offset int) ([]*Permission, error) {
+	return s.repo.FindPermissionsByServiceID(serviceID, limit, offset)
+}
+
+func (s *serviceImpl) UpdatePermission(id, name string, active bool) (*Permission, error) {
+	perm, err := s.repo.FindPermissionByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	perm.Name = name
+	perm.Active = active
+
+	if err := s.repo.UpdatePermission(perm); err != nil {
+		return nil, err
+	}
+	return perm, nil
+}
+
+func (s *serviceImpl) DeletePermission(id string) error {
+	return s.repo.DeletePermission(id)
 }
