@@ -9,6 +9,7 @@ type Repository interface {
 	FindByID(id string) (*User, error)
 	FindByEmail(email string) (*User, error)
 	FindByUsername(username string) (*User, error)
+	FindAll(limit, offset int) ([]*User, int64, error)
 	Update(user *User) error
 	Delete(id string) error
 	VerifyPassword(u *User, password string) bool
@@ -59,6 +60,22 @@ func (r *repository) FindByUsername(username string) (*User, error) {
 		return nil, err
 	}
 	return &user, nil
+}
+
+// FindAll gets all users with pagination
+func (r *repository) FindAll(limit, offset int) ([]*User, int64, error) {
+	var users []*User
+	var count int64
+
+	if err := r.db.Model(&User{}).Count(&count).Error; err != nil {
+		return nil, 0, err
+	}
+
+	if err := r.db.Limit(limit).Offset(offset).Find(&users).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return users, count, nil
 }
 
 // Update updates a user
